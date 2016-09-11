@@ -18,7 +18,7 @@ CREATE TABLE genre
   PRIMARY KEY (genreid)
 );
 
-LOAD DATA INFILE 'F:/data/entertainment/genre.csv' 
+LOAD DATA INFILE 'https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week2A/data/genre.csv' 
 INTO TABLE genre
 FIELDS TERMINATED BY ',' 
 ENCLOSED BY '"'
@@ -36,7 +36,7 @@ CREATE TABLE certificate
   PRIMARY KEY (certificateid)
 );
 
-LOAD DATA INFILE 'F:/data/entertainment/certificate.csv' 
+LOAD DATA INFILE 'https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week2A/data/certificate.csv' 
 INTO TABLE certificate
 FIELDS TERMINATED BY ',' 
 ENCLOSED BY '"'
@@ -71,7 +71,7 @@ CREATE TABLE movies
     
 );
 
-LOAD DATA INFILE 'F:/data/entertainment/movies.csv' 
+LOAD DATA INFILE 'https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week2A/data/movies.csv' 
 INTO TABLE movies
 FIELDS TERMINATED BY ',' 
 ENCLOSED BY '"'
@@ -94,7 +94,7 @@ CREATE TABLE survey
     ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-LOAD DATA INFILE 'F:/data/entertainment/survey.csv' 
+LOAD DATA INFILE 'https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week2A/data/survey.csv' 
 INTO TABLE survey
 FIELDS TERMINATED BY ',' 
 ENCLOSED BY '"'
