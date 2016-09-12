@@ -1,1 +1,266 @@
+---
+title: "Movie Recommendation"
+author: "Kumudini Bhave"
+date: "September 11, 2016"
+output:
+   html_document:
+    fontsize: 17pt
+    highlight: pygments
+    theme: cerulean
+    toc: yes
+---
 
+********
+
+
+# **Movie Recommendation Based On Survey**
+
+********
+
+## Summary
+
+This is an R Markdown document for providing documentation for performing **Data Exploration , Analysis & Recommendation Of A Movie Based On Survey Of Watchlist And Ratings**
+
+********
+
+## R Code :
+
+
+### Loading Packages Used
+
+```{r warning=FALSE, comment=FALSE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+knitr::opts_chunk$set(message = FALSE, echo=TRUE)
+
+# Libraries Used : DT , RMySQL, dplyr
+
+# Library for data display in tabular format
+library(DT)
+# Library for db operations
+library(RMySQL)
+# Library for data structure operations
+library(dplyr)
+
+
+```
+
+********
+
+### Function to get database connection 
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+mysql_dbconn <- function(schema, uid, pwd){
+  
+     rmysql.settingsfile<-"C:/ProgramData/MySQL/MySQL Server 5.6/my.ini"
+     conn <- dbConnect(RMySQL::MySQL(), dbname = schema, username=uid ,password = pwd)
+     return(conn)          
+}
+
+```
+
+********
+
+### Forming MYSQL DB Connection
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+conn <- mysql_dbconn("entertainment","root","WhiteLotus21")
+
+# List the database tables in entertainment schema
+entdbtables <- dbListTables(conn)
+
+```
+
+The tables in entertainment schema are :
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+entdbtables
+
+```
+
+### Iterate Tables and Display Their Columns /Attributes
+
+This details the table columns in the entertainment schema, using RMySQL package functions.
+
+```{r tidy=TRUE, tidy.opts=list(width.cutoff=80), echo=TRUE}
+
+for(i in entdbtables)  # for each row
+{
+     cat("\nTable Name : ", i,"\n")
+     
+     coltab <- dbListFields(conn,i)
+     cat("Columns : ","\n",coltab,"\n")
+     
+     
+     if (i == "survey")
+     {
+          cat(" We have a SURVEY!!")
+          cat("\n\n")
+          querystr<-paste("select count(*) from ",i)
+          
+          if(isIdCurrent(conn))
+          {
+               sres <- dbGetQuery(conn,querystr)
+               print(sres)
+          }
+          
+     }
+}
+
+
+```
+
+********
+
+### Capturing genre based movie lists
+
+Loading movie data in data sets based on different genres
+
+```{r tidy=TRUE, tidy.opts=list(width.cutoff=80), echo=TRUE}
+
+
+if(isIdCurrent(conn))
+{
+     allmoviesdb <-  dbGetQuery(conn,"select movieid, moviename, genre, genretype from movies, genre where movies.genre = genre.genreid")
+     allmovies <- subset(allmoviesdb, select= c(movieid, genre))
+     
+     action <- dbGetQuery(conn,"select movieid, genre from movies where genre='A'")
+     horror <- dbGetQuery(conn,"select movieid, genre from movies where genre='H'")
+     animated <- dbGetQuery(conn,"select movieid, genre from movies where genre='N'")
+     adventure <- dbGetQuery(conn,"select movieid, genre from movies where genre='V'")
+     western <- dbGetQuery(conn,"select movieid, genre from movies where genre='W'")
+     
+}
+```
+
+********
+
+### Finding movies ratings by respondents, Joining the movie, survey tables
+
+
+```{r tidy=TRUE, tidy.opts=list(width.cutoff=80), echo=TRUE}
+
+
+     joinstr<-paste("select respondentid, survey.movieid, moviename, genre, rating from movies, survey where movies.movieid = survey.movieid")
+     smjoinres <- dbGetQuery(conn,joinstr)
+
+```
+
+
+
+### Finding set of high rated / liked movies by respondents
+
+```{r tidy=TRUE, tidy.opts=list(width.cutoff=80), echo=TRUE}
+
+     ratehi <- subset(smjoinres, rating >= 4 )
+```
+
+********
+
+### Recommendation Function
+
+```{r tidy=TRUE, tidy.opts=list(width.cutoff=80), echo=TRUE}
+
+     
+recommendation <- function(respid){    
+     respwatched <- subset(smjoinres, respondentid == respid, select=c(movieid,genre))
+     respliked <- subset(ratehi, respondentid == respid, select=c(movieid,genre))
+     respnotwatched <- setdiff(allmovies, respwatched)
+  
+     if(nrow(respliked) ==0)
+     {
+        werecom.resp <- sample_n(subset(respnotwatched, genre %in% respwatched$genre), 1, replace = TRUE)
+     }
+     else
+     {
+          werecom.resp <- sample_n(subset(respnotwatched, genre %in% respliked$genre), 1, replace = FALSE )
+     }
+     return(werecom.resp$movieid)
+      
+}
+```
+
+********
+
+### Finding recommendation for all respondents of the survey
+
+```{r tidy=TRUE, tidy.opts=list(width.cutoff=80), echo=TRUE}
+
+
+recomdf <- as.data.frame(matrix(ncol=3, nrow=length(unique(smjoinres$respondentid))))
+dim(recomdf)
+
+for(i in unique(smjoinres$respondentid))  # for each row
+{
+     #cat("\n***********************************************************\n")
+    
+     #cat ("Recommended to respondent ", smjoinres$respondentid[i]," :  \n" )
+     recommovie <- recommendation(smjoinres$respondentid[i])
+     #print(recommovie)
+     recomdf[i,1] <- smjoinres$respondentid[i]
+     recomdf[i,2] <- subset(allmoviesdb, select = c(moviename), movieid == recommovie)
+     recomdf[i,3] <- subset(allmoviesdb, movieid == recommovie, select = genretype)
+ 
+}
+     
+```   
+
+
+
+
+********
+
+
+# **Two PopCorns  'N' A DVD Entertainment Inc**
+
+![Two PopCorns  'n' A DVD Entertainment Inc.](https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week2A/data/pnd.jpg)
+
+### Display respondents survey results    
+
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80), echo=TRUE}     
+          
+     datatable(smjoinres, options = list(
+          searching = FALSE, 
+          pageLength = 5,
+          lengthMenu = c(5, 10, 15, 20)
+     ), rownames = FALSE)
+     
+```
+
+
+********
+
+### Displaying Recommendation for All Respondents Of The Survey
+
+
+```{r tidy=TRUE, tidy.opts=list(width.cutoff=80), echo=TRUE}
+colnames(recomdf) <- c("Respondent Id","We Recommend You Watch","Genre")
+
+
+
+datatable(recomdf, options = list(
+     searching = FALSE, 
+     pageLength = 5,
+     lengthMenu = c(5, 10, 15, 20)
+), rownames = FALSE)
+
+
+```
+
+
+
+********
+
+
+### Close database connection     
+
+```{r tidy=TRUE, tidy.opts=list(width.cutoff=80), echo=TRUE}
+       
+dbDisconnect(conn)
+
+#####################################################################
+```
