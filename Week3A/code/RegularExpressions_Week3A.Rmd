@@ -1,1 +1,228 @@
+---
+title: "Regular Expressions"
+author: "Kumudini Bhave"
+date: "September 15, 2016"
+output:
+   html_document:
+    fontsize: 17pt
+    highlight: pygments
+    theme: cerulean
+    toc: yes
+---
+
+********
+
+
+# **Regular Expressions**
+
+********
+
+### Problem 3: Copy the introductory example. The vector name stores the extracted names.
+ R> name
+ [1] "Moe Szyslak" "Burns, C. Montgomery" "Rev. Timothy Lovejoy"
+ [4] "Ned Flanders" "Simpson, Homer" "Dr. Julius Hibbert"
+
+### Solution :
+
+
+### (a) Use the tools of this chapter to rearrange the vector so that all elements conform to the standard first_name last_name.
+
+```{r eval=TRUE}
+
+library(stringr)
+
+# A difficult example
+raw.data <- "555-1239Moe Szyslak(636) 555-0113Burns, C. Montgomery555-6542Rev. Timothy Lovejoy555 8904Ned Flanders636-555-3226Simpson, Homer5543642Dr. Julius Hibbert"
+
+# Extract information
+name <- unlist(str_extract_all(raw.data, "[[:alpha:]., ]{2,}"))
+name
+```
+
+********
+
+
+We go about by first removing any titles the names may have and also any other initials.
+Few names are in form of lastname first followed by ',' (comma). Hence we start by extracting firstnames and lastnames , removing any space paddings and then concatenating the two vectors obtained into one ordered names character vector separated by space.
+
+
+
+```{r eval=TRUE}
+
+# Removing the titles Dr. / Rev. and also the middke initial of Montogomery C. Burns
+
+name.notitle <- str_replace(name,pattern="[[:alpha:]]{1,}[.]", replacement="")
+
+
+# Extracting firstname
+
+firstname <- ifelse(str_detect(name.notitle,","),str_extract(name.notitle,", +[[:alpha:]]{2,}"), str_extract(name.notitle," ?[[:alpha:]]{2,} "))
+firstname <- str_replace(firstname,pattern=", +", replacement ="")
+firstname <- str_trim(firstname)
+
+# Extracting last name
+
+lastname <- ifelse(str_detect(name.notitle,","), str_extract(name.notitle,"[[:alpha:]]{2,}, +"), str_extract(name.notitle,"\\s[[:alpha:]]{2,}$"))
+lastname <- str_replace(lastname,pattern=",| +", replacement ="")
+
+# Concatenating the firstname and lastname to form ordered names vector
+
+orderedname <- paste(firstname,lastname ,sep=" ")
+
+# Prints orderednames
+
+orderedname
+
+```
+
+********
+
+
+### (b) Construct a logical vector indicating whether a character has a title (i.e., Rev. and Dr.).
+                                                                           
+We match the patterns that are likely to appear with the name vector to identify a logical vector. Only Rev. Timothy Lovejoy and Dr. Julius Hibbert show TRUE.
+                                                                           
+```{r eval=TRUE}
+
+name.hastitle <- str_detect(name,pattern="Rev|Dr[.]")
+name.hastitle
+```
+
+********
+
+### (c) Construct a logical vector indicating whether a character has a second name.
+
+We start by removing from the name vector only the titles and then doing a word count. This gives the number of words in each character string. Any stirng that has anything more tha first name and last name , i.e. more than 2 strings would be the one to have second name.
+
+Only Burns, C. Montgomery has a second name starting from C and hence returns TRUE.
+
+```{r eval=TRUE}
+
+name.notitle <- str_replace(name,pattern="Rev|Dr[.]", replacement="")
+hassecondname <- str_count(name.notitle,"\\w+")
+hassecondname <- str_detect(hassecondname, "3")
+
+# Prints the logical vector that reflects the strings that have second names
+hassecondname
+
+```
+
+
+********
+
+### Problem 4: Describe the types of strings that conform to the following regular expressions and construct an example that is matched by the regular expression.
+
+### Solution:
+
+### (a) [0-9]+\\$
+
+Any character string that contains a substring that matches a pattern of continuous digits followed by a $ sign. This may be a pattern at start or end or in between the string.
+
+```{r eval=TRUE}
+
+# example  [0-9]+\\$
+
+digitstring1 <- c("7812098$","kjj989898ww$","$243464","9090$09090")
+digitstring1 <- str_extract(digitstring1,"[0-9]+\\$")
+digitstring1
+
+digitstring2 <- c("7812098$","kjj989898ww$","$243464")
+digitstring2 <- str_extract(digitstring2,"[0-9]+\\$")
+digitstring2
+
+```
+
+********
+
+
+### (b) \\b[a-z]{1,4}\\b
+
+This pattern would fetch only those substrings that match a blank followed by atleast 1 upto 4 small alphabet characters followed by nother blank.
+
+```{r eval=TRUE}
+evalstring1 <- c(" 7812098$"," k "," ASDFG "," asdfg "," asdf ")
+evalstring1 <- str_extract(evalstring1,"\\b[a-z]{1,4}\\b")
+evalstring1
+```
+
+********
+
+### (c) .*?\\.txt$
+
+This pattern fetches strings that end with '.txt'
+
+```{r eval=TRUE}
+
+evalstring2 <- c(" 7812098$"," kjj98989txt$"," ASDFG.txt "," asdfg.txt"," asdf ")
+evalstring2 <- str_extract(evalstring2,".*?\\.txt$")
+evalstring2
+
+```
+
+********
+
+### (d) \\d{2}/\\d{2}/\\d{4}
+
+This string fetches string of digits which is more or less in date format of strictly 2 digits followed forward slash followed by strictly 2 digits and a forward slash and then strictly 4 digits. However it does not validate the range of digits.
+
+```{r eval=TRUE}
+
+evalstring3 <- c("781/1/121","10/10/2010","12/2/2010 ","12/12\2010"," asdf ","2/12/2010 " )
+evalstring3 <- str_extract(evalstring3,"\\d{2}/\\d{2}/\\d{4}")
+
+evalstring3
+
+```
+
+********
+
+### (e) <(.+?)>.+?</\\1>
+
+This pattern evaluates any wellformed markup tag which starts and ends.
+
+```{r eval=TRUE}
+evalstring4 <- c("<tag> hello/>","<tag>capture</tag>","<tag tagme /tag>")
+evalstring4 <- str_extract(evalstring4,"<(.+?)>.+?</\\1>")
+
+evalstring4
+
+
+```
+
+
+********
+
+
+### Problem 9. The following code hides a secret message. Crack it with R and regular expressions. Hint: Some of the characters are more revealing than others! The code snippet is also available in the materials at www.r-datacollection.com. 
+
+clcopCow1zmstc0d87wnkig7OvdicpNuggvhryn92Gjuwczi8hqrfpRxs5Aj5dwpn0Tanwo
+Uwisdij7Lj8kpf03AT5Idr3coc0bt7yczjatOaootj55t3Nj3ne6c4Sfek.r1w1YwwojigO
+d6vrfUrbz2.2bkAnbhzgv4R9i05zEcrop.wAgnb.SqoU65fPa1otfb7wEm24k6t3sR9zqe5
+fy89n6Nd5t9kc4fE905gmc4Rgxo5nhDk!gr
+
+
+### Solution:
+
+Observing the string , we find that intermediary characters are capitalized and hence to extract them to check if that has a  hidden meaningful string, we extarct all uppercase characters.
+
+```{r eval=TRUE}
+
+
+message <- c("clcopCow1zmstc0d87wnkig7OvdicpNuggvhryn92Gjuwczi8hqrfpRxs5Aj5dwpn0Tanwo
+Uwisdij7Lj8kpf03AT5Idr3coc0bt7yczjatOaootj55t3Nj3ne6c4Sfek.r1w1YwwojigO
+d6vrfUrbz2.2bkAnbhzgv4R9i05zEcrop.wAgnb.SqoU65fPa1otfb7wEm24k6t3sR9zqe5
+fy89n6Nd5t9kc4fE905gmc4Rgxo5nhDk!gr")
+
+message <- str_extract_all(message,"[[:upper:]]")
+
+# Extracted hidden message
+message
+
+```
+********
+
+
+
+
+
 
