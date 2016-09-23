@@ -1,0 +1,534 @@
+---
+title: "ChessRatings"
+author: "Kumudini Bhave"
+date: "September 23, 2016"
+output:
+   html_document:
+    fontsize: 17pt
+    highlight: pygments
+    theme: cerulean
+    toc: yes
+---
+********
+
+
+# **Chess Tournament Ratings Study And Conclusion**
+
+********
+
+## Summary
+
+This is an R Markdown document for providing documentation for **Studying The Chess Tournament Data, Data Manipulation, Analysis & Conclusion**
+
+********
+
+## R Code :
+
+### Loading Packages Used
+
+```{r warning=FALSE, comment=FALSE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+knitr::opts_chunk$set(message = FALSE, echo=TRUE)
+
+# Library for string manipulation/regex operations
+library(stringr)
+# Library for data display in tabular format
+library(DT)
+# Library to read text file
+library(RCurl)
+# Library to melt data from row to columns and vice versa
+library(reshape2)
+# Library to plot
+library(ggplot2)
+
+```
+
+********
+
+#### Function parsePlayer()
+
+Function to parse each player record and arrange all data in one row. Transpose record data into additional columns
+
+ @param1 : chessdata ,    type: data frame
+ 
+ return data frame
+ 
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+parsePlayer <- function(chessdata)
+{
+     for(i in seq(1,nrow(chessdata),2))  # for every two rows
+     {
+          chessdata$State[i] <- chessdata[i+1,1]
+          chessdata$IdRtgPrePost[i] <- chessdata[i+1,2]
+          chessdata$Level[i] <- chessdata[i+1,3]
+          chessdata$R1Col[i] <- chessdata[i+1,4]
+          chessdata$R2Col[i] <- chessdata[i+1,5]
+          chessdata$R3Col[i] <- chessdata[i+1,6]
+          chessdata$R4Col[i] <- chessdata[i+1,7]
+          chessdata$R5Col[i] <- chessdata[i+1,8]
+          chessdata$R6Col[i] <- chessdata[i+1,9]
+          chessdata$R7Col[i] <- chessdata[i+1,10]
+          
+     }
+
+
+     # Removing the second line of record data for each player, 
+     # after transposing data into columns 
+     
+     chessdata <- subset(chessdata, grepl("[[:digit:]]", chessdata$Pair) )
+     
+     return(chessdata)
+}
+
+
+```
+
+********
+
+#### Function getPreRating()
+
+Function to extract pre rating of opponent ( or any player 'pair' number passed)
+
+ @param1: oppo ,           type: numeric
+ 
+ @param2: cleanchessdata , type: data frame
+ 
+ return numeric
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+getPreRating <- function(opponum, opponentchessdata)
+{ 
+     preratingstring <- subset(opponentchessdata, as.numeric(Pair) == opponum , select = c(IdRtgPrePost))
+     preratingstring<-str_trim(preratingstring)
+     
+     prerating <- str_replace(preratingstring,pattern="[[:digit:]]{8}.+R: +",replacement = "")
+     prerating <- as.numeric(str_extract(prerating,"[[:digit:]]{2,}"))
+
+     return(prerating) 
+}
+
+
+
+```
+
+********
+
+#### Function calAvgOppPreRating()
+
+Function to parse each player record and calculate average opponent points all data in one row. Transpose into columns
+
+ @param1: playerchessdata,  type: data frame (single record)
+ 
+ @param2: oppochessdata,  type: data frame
+ 
+ return list( Avg opponent rating, Won game count, Losr game count, Draw game count)
+ 
+ Calls getPreRating()
+ 
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+calAvgOppPreRating <- function(playerchessdata, oppochessdata)
+{
+     totalopporating<-0
+     gamecount<-0
+     wincount<-0
+     losecount<-0
+     drawcount<-0
+     oppovec <- c()
+
+        
+          iteratecols <- c("R1","R2","R3","R4","R5","R6","R7")
+
+          # Rather than coding the same lines with hardcoding for finding opponent pair number for each round              # played , the columns names have been generated through string and iterated trhough to get the                  # opponent pair number for each round played. This is added to get a vector of opponents
+          
+          # Also extracted is if the game was won/lost/draw for the            # player
+            
+          for (eachround in iteratecols) 
+          {
+             
+               playerchessdatacol <- playerchessdata[, sprintf( "%s", eachround)]
+               playerchessdatacol <- str_trim(playerchessdatacol)
+               
+               
+               newoppo <- str_extract(playerchessdatacol,"\\s?([[:digit:]]{1,})") 
+               newoppo <- str_trim(newoppo)
+               winlosedraw <- str_extract(playerchessdatacol, "\\s?[[:alpha:]]{1}")
+               winlosedraw <- str_trim(winlosedraw)
+
+               
+               # Incrementing the respective counters based on Win Lose/Draw status
+               
+               ifelse(!(is.na(str_trim(newoppo))), oppovec<-c(oppovec,newoppo),oppovec<-c(oppovec,NA))
+               
+               if(winlosedraw == 'W')
+               {
+                    wincount <- wincount + 1  
+               }
+               else if(winlosedraw == 'L')
+               {
+                    losecount <- losecount + 1
+               }
+               else if(winlosedraw == 'D')
+               {
+                    drawcount <- drawcount + 1
+               }
+               
+          }
+          
+          
+          # Some values in opponent vectos can be 'NA' as the player may have a bye,
+          # Removing such 'NA' values from opponent vector 'oppovec'
+         
+          oppovec <- na.omit(oppovec)
+          
+          
+          # Iterate the oppovec to extract the pre rating for each opponent /every game played increment game              # counter
+          # by calling getPreRating() function
+          # Sum the pre ratings for all the opponents of the player
+          
+          if(length(oppovec) > 0 )
+          {
+               for(oppo in oppovec)
+               {
+                    oppoprerating <- getPreRating(as.numeric(oppo), oppochessdata)
+
+                    totalopporating <- totalopporating + oppoprerating
+                    gamecount <- gamecount + 1
+                    
+                  
+               }
+          }
+          #cat("\n","totalopporating  ",totalopporating)
+          #cat("\n", " gamecount  ", gamecount)
+          #cat("\n", " wincount   ", wincount)
+          #cat("\n", " losecount  ", losecount)
+          #cat("\n", " drawcount  ", drawcount)
+          
+          
+          # Calculate the Average opponent rating 
+          
+          averageopporating <- round(totalopporating / gamecount)
+
+          # Return Avg opponent rating, Games Won, Games Lost, Games Drawn
+          
+          return (list(AvgOppoRating=averageopporating,WinCount=wincount,LoseCount=losecount,DrawCount=drawcount))
+}
+
+
+
+``` 
+
+********
+
+#### Function checkpostrating()
+
+
+Function to parse each final player record.Gets the Prerating, avg opponent rating, and calculates the post rating based on formula
+
+
+ @param1: pf1 (final player 1),                     type: numeric
+ 
+ @param2: pf2 (final player 2),                     type: numeric
+ 
+ @param3: winner (assumed winner pair number),      type : numeric
+ 
+ @param4: cleanchessdata ,                          type: data frame
+ 
+ return list( pf1postrating (Final Player 1 post rating), pf2postrating (Final Player 2 post rating), Lead Player(Leading in Rating) Pair Number)
+ 
+ Calls get PreRating()
+ 
+ ![Performance Rating Formula](https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week4P1/PerformanceRating.jpg)
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+
+checkpostrating <- function(pf1,pf2,winner, cleanchessdata)
+{
+   pf1prerating <-       getPreRating(pf1, cleanchessdata)
+   
+   pf2prerating <-       getPreRating(pf2, cleanchessdata)
+   
+   pf1gamestats <- calAvgOppPreRating(subset(cleanchessdata, as.numeric(Pair) == pf1),cleanchessdata)
+   
+   pf1AvgOpponentPreRating <- pf1gamestats$AvgOppoRating
+   pf1Won <- pf1gamestats$WinCount
+   pf1Lost <- pf1gamestats$LoseCount
+   pf1Draw <- pf1gamestats$DrawCount
+   pf1gamecount <- pf1Won + pf1Lost + pf1Draw
+   
+   
+   
+   pf2gamestats <- calAvgOppPreRating(subset(cleanchessdata, as.numeric(Pair) == pf2),cleanchessdata)
+   
+   pf2AvgOpponentPreRating <- pf2gamestats$AvgOppoRating
+   pf2Won <- pf2gamestats$WinCount
+   pf2Lost <- pf2gamestats$LoseCount
+   pf2Draw <- pf2gamestats$DrawCount
+   pf2gamecount <- pf2Won + pf2Lost + pf2Draw
+   
+   postratingpf1<-0
+   postratingpf2<-0
+   lead<-0
+   
+   if(winner == pf1)
+   {
+        postratingpf1 <- ((pf1AvgOpponentPreRating * pf1gamecount ) + (400 * (pf1Won-pf1Lost )) + pf2prerating + 400) / (pf1gamecount + 1)
+
+        postratingpf2 <- ((pf2AvgOpponentPreRating * pf2gamecount ) + (400 * (pf2Won-pf2Lost )) + pf1prerating - 400) / (pf2gamecount + 1)        
+        
+        if(postratingpf1 > postratingpf2) lead<-pf1 
+        else lead<-pf2
+   }
+   else if(winner == pf2)
+   {
+        
+        postratingpf1 <- ((pf1AvgOpponentPreRating * pf1gamecount ) + (400 * (pf1Won-pf1Lost )) + pf2prerating - 400) / (pf1gamecount + 1)
+        
+        postratingpf2 <- ((pf2AvgOpponentPreRating * pf2gamecount ) + (400 * (pf2Won-pf2Lost )) + pf1prerating + 400) / (pf2gamecount + 1)        
+        
+        if(postratingpf1 > postratingpf2) lead<-pf1 
+        else lead<-pf2
+   }
+   
+   
+   return (list(pf1postrating=round(postratingpf1),  pf2postrating=round(postratingpf2), lead=lead))
+   
+     
+}
+
+
+
+```
+
+
+********
+
+#### Function checkleadpostrating()
+
+
+Function to parse each player record and calculate average opponent points all data in one row. Transpose into columns
+
+ @param1: final (final two players) ,               type: numeric vector
+ 
+ @param2: cleanchessdata ,                          type: data frame
+ 
+ return string
+ 
+ Calls checkpostrating()
+ 
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+checkleadpostrating<-function(final, cleanchessdata)
+{
+
+     View(cleanchessdata)
+     iffinal1wins <- checkpostrating(final[1],final[2],final[1], cleanchessdata)
+     iffinal1wins
+     
+     f1w.final1post <- iffinal1wins$pf1postrating
+     f1w.final2post <- iffinal1wins$pf2postrating
+     f1w.lead <- iffinal1wins$lead
+     f1w.final1post
+     f1w.final2post
+
+     iffinal2wins <- checkpostrating(final[1],final[2],final[2], cleanchessdata)
+     f2w.final1post <- iffinal2wins$pf1postrating
+     f2w.final2post <- iffinal2wins$pf2postrating
+     f2w.lead <- iffinal2wins$lead
+     
+     POST <- str_c("If Player ",final[1],"( PostRating :",f1w.final1post  ,")", " Wins To Player ",final[2], "(  PostRating :",f1w.final2post  ,")", "  Lead in Rating is Player", f1w.lead, " Else If Player ", final[2]," ( PostRating :",f2w.final2post,") "," Wins To Player  ", final[1], "  (  PostRating :",f2w.final1post,")"," Lead in Rating Is Player ",f2w.lead)
+     
+     return(POST)
+          
+}
+
+```
+
+********
+
+### Main Data Manipulation
+
+#### Loading The Chess Tournament Data
+
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+# GitHub Location of tournament data file
+
+chessdata.giturl <- "https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week4P1/tournamentinfo.txt"
+
+chessdata.gitdata <- getURL(chessdata.giturl)
+
+# Reading text file from the GitHub location making header as false and skipping the first 4 lines 
+# (that represent ----  followed by two lines of headers followed by -----)
+
+crudechessdata <- read.table(text=chessdata.gitdata, header=FALSE, fill=TRUE, sep="|", skip=4, stringsAsFactors= FALSE)
+
+#View(crudechessdata)
+
+# Removing last NA column
+crudechessdata <- subset(crudechessdata, select= -c(V11))
+
+# Renaming Columns
+colnames(crudechessdata) <- c("Pair","PlayerName","TotalPoints","R1","R2","R3","R4","R5","R6","R7")
+
+# Filter out rows where first column match '----' 
+crudechessdata <- crudechessdata[-grep('-----', crudechessdata[,1]),] 
+
+# Form clean data frame
+cleanchessdata <- parsePlayer(crudechessdata) 
+# View(cleanchessdata)
+
+```
+
+********
+
+#### Finding Average Opponent Rating And Other Stats
+
+Loop through each record of of player to find the avg opponent pre rating
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+for (i in seq(1,nrow(cleanchessdata),1)) 
+{    
+
+     
+     cleanchessdata$PlayerName[i]<-str_trim(cleanchessdata$PlayerName[i])
+    
+     cleanchessdata$State[i] <- str_trim(cleanchessdata$State[i])
+     
+     cleanchessdata$TotalPoints[i] <- str_trim(cleanchessdata$TotalPoints[i])
+     
+     
+     playerPreRating <- getPreRating(i, cleanchessdata)
+     cleanchessdata$PlayerPreRating[i] <- playerPreRating
+
+     
+     gamestats <- calAvgOppPreRating(subset(cleanchessdata, as.numeric(Pair) == i),cleanchessdata)
+
+     # Also finding other stats like Games Won, Games Lost, Games Drawn
+     
+     cleanchessdata$AvgOpponentPreRating[i] <- gamestats$AvgOppoRating
+     cleanchessdata$Won[i] <- gamestats$WinCount
+     cleanchessdata$Lost[i] <- gamestats$LoseCount
+     cleanchessdata$Draw[i] <- gamestats$DrawCount
+     
+  
+}
+
+```
+
+********
+
+#### Exporting Required Data To CSV
+
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE, eval=TRUE}
+
+
+# Aggregating relevant data to form CSV file, Writing and Showing the CSV file
+
+exportChessDF <- subset(cleanchessdata,select=c(PlayerName,State,TotalPoints,PlayerPreRating,AvgOpponentPreRating,Won,Lost,Draw))
+write.csv(exportChessDF,file="ChessTournamentStats.csv",row.names=FALSE)
+
+```
+
+********
+
+#### Displaying DataSet
+
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80), echo=TRUE}     
+          
+     datatable(exportChessDF, options = list(
+          searching = FALSE, 
+          pageLength = 5,
+          lengthMenu = c(5, 10, 15, 20)
+     ), rownames = FALSE)
+     
+```
+
+********
+
+``` {r eval="TRUE"}
+
+file.show(file="ChessTournamentStats.csv",title="Chess Tournament Results And Ratings")
+
+```
+```{r comment=''}
+cat(readLines('ChessTournamentStats.csv'), sep = '\n')
+```
+
+*******
+
+#### Plot: Players Vs Game Results
+
+To plot the games stats for each player, melt the dataset and reshape it.
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+# Using melt() from reshape package
+
+
+plotwinstatsdf <- subset(exportChessDF,select=c(PlayerName,Won,Lost,Draw))
+melted.plotwinstatsdf <- melt(plotwinstatsdf, id= c("PlayerName"))
+
+colnames(melted.plotwinstatsdf) <- c("PlayerName", "GameStats","NoOfGames")
+
+# Assign Color to bars per Won/Lost/Draw
+
+colorbar<- c("Won"="magenta","Lost"="yellow", "Draw"="cyan") 
+
+```
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE, eval="FALSE"}
+
+# Redirecting the plot to PDF file
+
+toplot <- ggplot(melted.plotwinstatsdf, aes(x=PlayerName, y= NoOfGames, fill= GameStats)) + ggtitle("Players Vs Game Results") + geom_bar(colour="black",stat='identity') + coord_flip() + scale_fill_manual(values = colorbar)
+
+pdf("PlayerGames.pdf",width=5, height=15)
+toplot
+dev.off()
+
+
+```
+
+
+********
+
+#### Attempt To Find Post Rating Lead Between Top Two Players
+
+An attempt to find the Post Ratings of the Winner , if a final game is played between the top two players.
+The top two players are considered to be the ones Who won the max number of games.
+i.e. for current data set it is Pair 2, Pair 3
+
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+fin<- subset(cleanchessdata, Won == max(exportChessDF$Won), select=c(Pair))
+finals <-c(as.numeric(fin[1,1]),as.numeric(fin[2,1]))
+finals
+```
+
+
+``` {r eval=TRUE}
+# Posting who would lead in ratings 
+
+newpost<-checkleadpostrating(finals, cleanchessdata)
+
+cat("Today's Big Game : ", newpost)
+
+#####################################################################################
+
+```
+********
+
