@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<!DOCTYPE booklist [
+<!ELEMENT book_information (book)>
+<!ELEMENT book (Title,Authors,Genre,Language,Publisher,Pages,Rating,PriceINR)>
+<!ELEMENT Title (#PCDATA)>
+<!ELEMENT Authors (#PCDATA)>
+<!ELEMENT Genre (#PCDATA)>
+<!ELEMENT Language (#PCDATA)>
+<!ELEMENT Publisher (#PCDATA)>
+<!ELEMENT Pages (#PCDATA)>
+<!ELEMENT Rating (#PCDATA)>
+<!ELEMENT PriceINR (#PCDATA)>
+<!ATTLIST book id CDATA #IMPLIED>
+
+]>
+
+<booklist>
+	<book id="1">
+		<Title>Birbal the Witty</Title>
+		<Authors>Kamala Chandrakant</Authors>
+		<Genre>Children's Books</Genre>
+        <Language>English</Language>
+        <Publisher>Amar Chitra Katha</Publisher>
+		<Pages>32</Pages>
+        <Rating>5</Rating>
+        <PriceINR>67</PriceINR>
+	</book>
+	<book id="2">
+		<Title>Tales from the Panchatantra</Title>
+		<Authors>Anant Pai, Kamala Chandrakant</Authors>
+		<Genre>Children's Books</Genre>
+        <Language>English</Language>
+        <Publisher>Amar Chitra Katha</Publisher>
+		<Pages>96</Pages>
+        <Rating>5</Rating>
+        <PriceINR>250</PriceINR>
+	</book>
+	<book id="3">
+        <Title>Oliver Twist</Title>
+		<Authors>Charles Dickens</Authors>
+		<Genre>Young Adult</Genre>
+        <Language>English</Language>
+        <Publisher>Vintage Children's Classics</Publisher>
+		<Pages>736</Pages>
+        <Rating>5</Rating>
+        <PriceINR>150</PriceINR>
+	</book>
+    <book id="4">
+        <Title>The Road Ahead</Title>
+		<Authors>Bill Gates, Nathan Myhrvold, Peter Rinearson</Authors>
+		<Genre>Young Adult, Business</Genre>
+        <Language>English</Language>
+        <Publisher>Penguin Books</Publisher>
+		<Pages>352</Pages>
+        <Rating>4.5</Rating>
+        <PriceINR>1250</PriceINR>
+     </book>
+    <book id="5">
+        <Title>R In Action</Title>
+		<Authors>Robert L. Kabacoff</Authors>
+		<Genre>Computer Science</Genre>
+        <Language>English</Language>
+        <Publisher>Manning</Publisher>
+		<Pages>608</Pages>
+        <Rating>4</Rating>
+        <PriceINR>575</PriceINR>
+     </book>
+</booklist>

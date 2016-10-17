@@ -1,0 +1,68 @@
+{
+    "booklist":{
+        "book": [
+	        {
+                "id": "1",
+                "Title": "Birbal the Witty",
+                "Authors": "Kamala Chandrakant",
+                "Genre": "Children's Books",
+                "Language": "English",
+                "Publisher": "Amar Chitra Katha",
+                "Pages": "32",
+                "Rating": "5",
+                "PriceINR": "67"
+            },
+            {
+                "id": "2",
+                "Title": "Tales from the Panchatantra",
+                "Authors": [
+                            "Anant Pai", 
+                            "Kamala Chandrakant"
+                           ]
+                "Genre": "Children's Books",
+                "Language": "English",
+                "Publisher": "Amar Chitra Katha",
+                "Pages": "96",
+                "Rating": "5",
+                "PriceINR": "250"
+            },
+            {
+                "id": "3",
+                "Title": "Oliver Twist",
+                "Authors": "Charles Dickens",
+                "Genre": "Young Adult",
+                "Language": "English",
+                "Publisher": "Vintage Children's Classics",
+                "Pages": "736",
+                "Rating": "5",
+                "PriceINR": "150"
+            },
+            {
+                "id": "4",
+                "Title": "The Road Ahead",
+                "Authors": [
+                            "Bill Gates",
+                            "Nathan Myhrvold",
+                            "Peter Rinearson"
+                           ]
+                "Genre": "Young Adult, Business",
+                "Language": "English",
+                "Publisher": "Penguin Books",
+                "Pages": "352",
+                "Rating": "4.5",
+                "PriceINR": "1250"
+            },
+            {
+                "id": "5",
+                "Title": "R In Action",
+                "Authors": "Robert L. Kabacoff",
+                "Genre": "Computer Science",
+                "Language": "English",
+                "Publisher": "Manning",
+                "Pages": "608",
+                "Rating": "4",
+                "PriceINR": "575"
+            }
+        ]
+    }
+}
