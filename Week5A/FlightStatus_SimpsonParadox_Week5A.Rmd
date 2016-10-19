@@ -1,0 +1,182 @@
+---
+title: "FlightStatus_SimpsonParadox"
+author: "Kumudini Bhave"
+date: "October 18, 2016"
+output:
+  html_document:
+    toc: yes
+---
+
+********
+
+# **Flight Status Compare : Simpson's Paradox**
+
+********
+
+## Summary
+
+This is an R Markdown document for providing documentation for **Flight Status Compare And Analysis**.
+An attempt has been made to reshape data using differnet packages and tidying data for further analysis.
+
+********
+
+## R Code :
+
+### Loading Packages Used
+
+
+```{r warning=FALSE, comment=FALSE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+knitr::opts_chunk$set(message = FALSE, echo=TRUE)
+
+# Library for string manipulation/regex operations
+library(stringr)
+# Library for data display in tabular format
+library(DT)
+# Library to read text file
+library(RCurl)
+# Library to melt (to long format) and cast (to wide format) data
+library(reshape)
+# Library to gather (to long format) and spread (to wide format) data, to tidy data
+library(tidyr)
+# Library to filter, transform data
+library(dplyr)
+# Library to plot
+library(ggplot2)
+
+library(knitr)
+
+
+```
+
+
+********
+
+### Flight DataSet
+
+
+ Loading the flight status data, Reading text file from the GitHub location with Header as True
+ 
+ 
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+flightstatus.giturl <- "https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week5A/flightstatus.csv"
+
+flightstatus.gitdata <- getURL(flightstatus.giturl)
+
+
+flightdata <- read.csv2(text=flightstatus.gitdata, header=T,sep=",",stringsAsFactors= FALSE)
+
+datatable(flightdata)
+
+
+```
+
+********
+
+
+### Using melt() , cast() from reshape package
+
+Melting data from wide format to long format using melt() from reshape package
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+melted.flightdatasdf <- melt(flightdata, id= c("Airline","Status"))
+colnames(melted.flightdatasdf) <- c("Airline", "Status", "City","#Flights")
+melted.flightdatasdf <- melted.flightdatasdf %>% mutate(City = gsub( "\\.", " ", City))
+
+datatable(melted.flightdatasdf)
+
+```
+
+
+Casting data from long format to wide format using melt() from reshape package
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+newflightdata <- cast(melted.flightdatasdf,Airline + City ~ Status)
+colnames(newflightdata) <- c("Airline", "City","Delayed", "OnTime")
+datatable(newflightdata)
+
+
+```
+
+********
+
+### Using tidyr package
+
+
+Using gather() to convert to long format
+
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+tidylongflightdata <- flightdata %>% 
+     gather(City, NumFlights, Los.Angeles:Seattle, na.rm = FALSE)
+tidylongflightdata <- tidylongflightdata %>% mutate(City = gsub( "\\.", " ", City))
+
+datatable(tidylongflightdata)
+
+```
+
+
+
+Using spread() to convert to wide format
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+tidywideflightdata <- tidylongflightdata %>% 
+     spread(Status, NumFlights)
+colnames(tidywideflightdata) <- c("Airline", "City","Delayed", "OnTime")
+
+datatable(tidywideflightdata)
+
+```
+
+
+********
+
+
+### Using deplyr package, calculating City-wise OnTime Probability for each airline
+
+Using deplyr package for adding OnTime Probability column and arranging by Destination City
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+ontimeprob_tidwideflightdata <- tidywideflightdata %>% 
+     mutate("OnTimePct" =  round(OnTime / (Delayed + OnTime),3), "DelayedPct" = round(Delayed / (Delayed + OnTime),3)) %>% 
+     arrange(City)
+
+datatable(ontimeprob_tidwideflightdata)
+
+```
+
+
+********
+
+### Plotting Airline Data
+
+Plotting the On Time Probability Percentage for different destination cities for both airlines.
+We find that Alaska airlines although , at glance may appear to be lesser efficient, we derive from the plot that it is more reliable as its on time probability is higher than that of AM West airlines.
+
+********
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+ggplot(ontimeprob_tidwideflightdata, aes(x=City, y=OnTimePct, fill=Airline)) + xlab("Destination City") +  ylab("On-Time Probability") + ggtitle("Airline On-Time Probability Compare") + geom_bar(stat="identity", position=position_dodge()) + scale_fill_manual(values=c("yellow", "red"))
+
+
+```
+
+
+********
+
+
+### Conclusion :
+We see from the plot , how although Alaska Airline's on-time flight figures make it appear to be less reliable than AM West Airline, the on-time ratio to total flights proves that the on-time probability of Alaska Airline is better than the AM West Airline's on-time probability.
+Such reversal/disappearance of an obvious situation is called Simpson's Paradox
+
+********
+
