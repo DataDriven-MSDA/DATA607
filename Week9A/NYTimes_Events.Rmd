@@ -1,1 +1,202 @@
+---
+title: "NYTimes_Events.Rmd"
+author: "Kumudini Bhave"
+date: "November 3, 2016"
+output:
+  html_document:
+    fontsize: 17pt
+    highlight: pygments
+    theme: cerulean
+    toc: yes
+---
 
+********
+
+# **New York Times : Events API**
+
+********
+
+
+## Summary
+
+**Web Scraping, with Web APIs, from New York Times Developer API , Data Importing Exploration And Analysis Of the Events  DataSet Available Through New York Times Events API**
+
+
+********
+
+
+
+## R Code :
+
+
+### Loading Packages Used
+
+
+
+```{r warning=FALSE, comment=FALSE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+knitr::opts_chunk$set(message = FALSE, echo=TRUE)
+
+# Library for string manipulation/regex operations
+library(stringr)
+# Library for data display in tabular format
+library(DT)
+
+# Library to gather (to long format) and spread (to wide format) data, to tidy data
+library(tidyr)
+# Library to filter, transform data
+library(dplyr)
+# Library to plot
+library(ggplot2)
+library(knitr)
+
+# Library for loading data
+library(jsonlite)
+
+
+library(ggmap)
+library(ggrepel)
+
+```
+
+
+********
+
+
+
+### Scraping NYT Events data with Event API
+
+New York Times has developer APIs to access the different datasets available to explore.
+The Events API is chosen to access Events data. 
+Only Comedy and Dance Events occurring in the vicinity of 2500 meters radius , over the upcoming weekend i.e. next three days, form Nov 4, 2016 to Nov 6 2016 are considered.
+
+Following parameters are considered for filtering the events data
+
+**Parameters Considered**
+
+- **Area Near :** 
+     - *Times Square, Longitude: 40.7589, Latitude :-73.9851*
+    
+- **Radius :**
+     - *2500 meters*
+
+- **Event Category :**
+     - *Comedy And Dance*
+ 
+- **Event Happening Between :**
+     - *Nov 4,2016 And Nov 6, 2016*
+
+- **NY Times Picked :**
+     - *True*    
+ 
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+apikey <- c("837a0f631c0442a6823a690e4900e106")
+nytevent.baseurl <- "https://api.nytimes.com/svc/events/v2/listings.json?"
+latlongparam <-c("40.7589,-73.9851")
+radiusparam <- c("2500")
+categoryparam <-c("(Comedy+Dance)")
+daterangeparam <- c("2016-11-04:2016-11-06")
+timeschoiceparam<-c("true")
+
+```
+
+
+**Forming URL To Web Scrape The Events Data**
+
+The parameters / filters are attached as query string and url is formed.
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+nytevent.url <- paste0(nytevent.baseurl,"api-key=", apikey,"&ll",latlongparam,"&radius",radiusparam,"&filters=","category:",categoryparam,",","times_pick:",timeschoiceparam,"&date_range:",daterangeparam)
+
+nytevent.url
+
+
+```
+
+********
+
+**Importing Data New York Times Website**
+
+The Events data is available in JSON format. Based on the parameters considered, the url is formed and data imported into R.
+
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+nytevent.jsonstr <- paste(readLines(nytevent.url),collapse="")
+
+nyteventdata <- fromJSON(nytevent.jsonstr)
+
+
+names(nyteventdata)
+class(nyteventdata)
+
+```
+
+
+
+**Extracting Imported JSON Data Into R Data Frame**
+
+
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+nyceventsnearTSQ <- as.data.frame(nyteventdata$results)
+
+
+```
+
+
+
+********
+
+
+
+### Data Exploration And Data Munging For NYT  Events Data
+
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+nyceventsnearTSQ <- nyceventsnearTSQ %>% select(event_id,event_name,event_detail_url,web_description,venue_name, geocode_latitude,geocode_longitude,street_address, category, date_time_description)
+
+nyceventsnearTSQ <-  nyceventsnearTSQ %>% mutate(web_description = paste(c(substr(web_description, start=1, stop=250)),"..."))
+
+colnames(nyceventsnearTSQ) <- c("Id","Event","URL","About","Venue","Latitude","Longitude","Address","Category","DateTime")
+
+
+datatable(nyceventsnearTSQ)
+
+
+
+```
+
+********
+
+### Plotting The Events On NYC Road Map
+
+Mapping the various Comedy and Dance Events to occur over upcoming weekend to NYC Map across boroughs.
+
+
+```{r warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=120), echo=TRUE, fig.width=10,fig.height=10}
+
+
+lon <- as.numeric(as.character(nyceventsnearTSQ$Longitude))
+lat <- as.numeric(as.character(nyceventsnearTSQ$Latitude))
+
+nycmap <- get_map("New York City",maptype='roadmap', source='google', zoom=12)
+mapPoints <- ggmap(nycmap)  +    geom_point(aes(x = lon, y = lat, color=nyceventsnearTSQ$Category), , size=3,  data = nyceventsnearTSQ, alpha = .5) 
+mapPoints <- mapPoints + xlab("Longitude") + ylab("Latitude")
+
+mapPoints<- mapPoints +
+geom_label_repel(data = nyceventsnearTSQ, aes(x = lon, y = lat, label = paste(nyceventsnearTSQ$Event,"@",nyceventsnearTSQ$Venue)), 
+                 fill = "white", box.padding = unit(.4, "lines"),
+                 label.padding = unit(.10, "lines"),
+                 segment.color = "red", segment.size = 1)
+
+
+mapPoints
+```
+
+********
