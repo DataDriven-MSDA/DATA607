@@ -69,6 +69,7 @@ Cross Library linking and recommendations can be done by integrating different c
 
 Advanced administrative and customizing tools for libraries can be provided
 
+Use clustering techniques to to facilitate advance subject wise searches
 
 ********
 
