@@ -1,1 +1,77 @@
+---
+title: "RecommenderSystem"
+author: "Kumudini Bhave"
+date: "November 9, 2016"
+output: 
+ html_document:
+    fontsize: 17pt
+    highlight: pygments
+    theme: cerulean
+    toc: yes
+---
+
+********
+
+# **Study Of A Library / Catalog Recommender System**
+
+********
+
+## Summary
+
+Understanding the functionality and scope of betterment of a library / catalog recommender system 
+**BibTip**   http://www.bibtip.com/en 
+
+********
+
+## Catalogue Recommender System : BibTip 
+
+BibTip is a recommender system that adds value for online catalogues.
+
+BibTip recommends links of similar titles through careful observation of user behaviour during catalogue search and statistical analysis
+
+Data generated via title displays in online catalog sessions are stored and user views counted. The co-occurrences between pairs of titles are established if the two titles were viewed together in at least one session. These co-occurrences are counted and summarized in a co-occurrence matrix. In a further step, this matrix is evaluated in order to generate the recommendations
+
+It uses Repeat Buying Theory.
+
+
+*********
+
+
+## Scenario Design & Analysis:
+
+
+### Target Users And Goals 
+
+Target Users of BibTip are the the online library users.
+
+The key goals of this product is to study user preferences and generate custom-tailored catalog-specific recommendations.
+
+The goals can be met by observing and aggregating user behaviour and browsing history, wishlists, to-read lists, and making recommendation based on these and matching with read-lists of other users with similar interests.
+
+
+
+*******
+
+
+### Reverse Engineering:
+
+The product can maintain information (to-read lists, read-lists of other users and make it available for views (depending on privacy settings opted by the user)
+
+Also depending upon user profile and background (industry/stream the user belongs to) recommendations model can be made and applied to new library user sign-ups.
+
+
+********
+
+
+### Recommendations For Product Improvement
+
+Cross Library linking and recommendations can be done by integrating different college libraries from same university / state / public libraries
+
+Advanced administrative and customizing tools for libraries can be provided
+
+
+********
+
+
+
 
