@@ -1,4 +1,42 @@
-#init
+---
+title: "ReutersDocumentClassification"
+author: "Kumudini Bhave"
+date: "November 10, 2016"
+output:
+  html_document:
+    fontsize: 17pt
+    highlight: pygments
+    theme: cerulean
+    toc: yes
+---
+
+********
+
+
+# **Reuters DataSet : Document Classification**
+
+********
+
+
+## Summary
+
+**Performing Text Mining With Machine Learning Algorithm For Document Classification Of Reuters Dataset And Observing Performance Of Different Models For Classsification**
+
+
+********
+
+
+
+## R Code : Preparing Term Document Matrix From the Reuters DataSet
+
+
+### Loading Packages Used
+
+
+```{r warning=FALSE, comment=FALSE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+knitr::opts_chunk$set(message = FALSE, echo=TRUE)
+
+
 
 library("tm")
 library("plyr")
@@ -11,21 +49,58 @@ library("RTextTools")
 library("e1071")
 library("tidyr")
 library("DT")
+library("ggplot2")
+
+
+
+```
+
+
+### Loading Dataset
+
+Downloaded the Reuters Dataset from
+
+Reuters-21578 DataSet can be downloaded as zip from : http://disi.unitn.it/moschitti/corpora.htm
+
+Uploaded at
+https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week10A/Data
+
+For this assignment, the zip was downloaded and extracted locally for different categories .
+The Reuters dataset consists of 90 categories and classified into Test and Training as separate dataset for each category.
+
+Here the categories of 'Trade' and 'MoneyFx' is used to perform document classification.
+
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
 
 options(stringsAsFactors = FALSE)
 
 datapath <- "F:/Data/Reuters21578_90Cat/training"
-category <- c("grain","wheat")
+category <- c("trade","moneyfx")
+
+# Trainig Data for Trade and MoneyFx categories
 
 trade.directory <- "F:/Data/Reuters21578_90Cat/training/trade"
 moneyfx.directory <- "F:/Data/Reuters21578_90Cat/training/moneyfx"    
 
+# Test Data for Trade and MoneyFx categories
+
 tradetest.dir <- "F:/Data/Reuters21578_90Cat/test/trade"
 moneyfxtest.dir <- "F:/Data/Reuters21578_90Cat/test/moneyfx"
 
+```
+
+********
+
+### Data Cleansing Function
+
+The Corpus for 'Trade' and 'MoneyFx' categories need to be cleaned of punctuations, numbers and commong english language words. Doing so, facilitates the relevant terms to surface for text mining that would help build classification model.
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
 
 
-# clean text
 cleanupDataCorpus <- function(dataCorpus){
      
      cleanDataCorpus <- tm_map(dataCorpus, removePunctuation)
@@ -43,7 +118,14 @@ cleanupDataCorpus <- function(dataCorpus){
      
 }
 
-# build Term Document Matrix for training data
+```
+
+
+********
+
+### Build Term Document Matrix For Training Data
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
 
 trade.corpus <- Corpus(DirSource(directory=trade.directory, encoding = "ASCII"))
 moneyfx.corpus <- Corpus(DirSource(directory=moneyfx.directory, encoding = "ASCII"))
@@ -67,7 +149,15 @@ head(moneyfx.datamatx)
 trade.df <- as.data.frame(trade.datamatx)
 moneyfx.df <- as.data.frame(moneyfx.datamatx)
 
-# build Term Document Matrix for test data
+
+```
+
+********
+
+
+### Build Term Document Matrix For Test Data
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
 
 tradetest.corpus <- Corpus(DirSource(directory=tradetest.dir, encoding = "ASCII"))
 moneyfxtest.corpus <- Corpus(DirSource(directory=moneyfxtest.dir, encoding = "ASCII"))
@@ -91,12 +181,23 @@ head(moneyfxtest.datamatx)
 tradetest.df <- as.data.frame(tradetest.datamatx)
 moneyfxtest.df <- as.data.frame(moneyfxtest.datamatx)
 
-
-# filtering for columns present in test and training and then adding the columns/terms present only in training
-# attempt to keep the same terms in test and training 
+```
 
 
-# subset trade testing data by colnames (ie. terms) from training trade data
+
+********
+
+
+### Aligning Test Data Terms with Training Data Terms
+
+
+Filtering for columns present in test and training and then adding the columns/terms present only in training.
+Attempt to keep the same terms in test and training 
+
+
+#### subset trade testing data by colnames (ie. terms) from training trade data
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
 
 trade.df.mat <- as.matrix(trade.df)
 tradetest.df.mat <-  as.matrix(tradetest.df)
@@ -112,8 +213,13 @@ tradetestfiltered <- rbind.fill(tradetestfiltered1, tradetestfiltered2)
 
 ncol(tradetestfiltered)
 
+```
 
-# subset moneyfx testing data by colnames (ie. terms) from moneyfx training data
+
+
+#### subset moneyfx testing data by colnames (ie. terms) from moneyfx training data
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
 
 
 moneyfx.df.mat <- as.matrix(moneyfx.df)
@@ -130,12 +236,17 @@ moneyfxtestfiltered <- rbind.fill(moneyfxtestfiltered1, moneyfxtestfiltered2)
 
 ncol(moneyfxtestfiltered)
 
+```
+
+
+********
 
 
 
+### Binding 'Category' Column To The Data Frame
 
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
 
-# Binding 'Category' column to the data frame
 
 trade.df <- cbind(trade.df, category= rep("trade"))
 moneyfx.df <- cbind(moneyfx.df, category = rep("moneyfx"))
@@ -143,12 +254,22 @@ moneyfx.df <- cbind(moneyfx.df, category = rep("moneyfx"))
 tradetestfiltered <- cbind(tradetestfiltered, category= rep("trade"))
 moneyfxtestfiltered <- cbind(moneyfxtestfiltered, category = rep("moneyfx"))
 
+```
 
-# We now have two dataframes  , one each category , with the content as rows and the terms as variables / columns.
-# and a category column appended to denote the category.
-# We now stack botht the tdms 
 
-# Stacking the TDMS of different categories for training data
+********
+
+### Stacking different categories TDM together
+
+We now have two dataframes  , one each category , with the content as rows and the terms as variables / columns, and a category column appended to denote the category.
+
+We now stack both the tdms 
+
+
+#### Stacking the TDMS of different categories for training data
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
 
 tdm.stackedcategory <- rbind.fill(trade.df, moneyfx.df)
 
@@ -162,7 +283,14 @@ ncol(trade.df)
 ncol(moneyfx.df)
 ncol(tdm.stackedcategory)
 
-# Stacking the TDMS of different categories for test data
+```
+
+
+#### Stacking the TDMS of different categories for test data
+
+
+```{r warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
 tdm.teststackedcategory <- rbind.fill(tradetestfiltered, moneyfxtestfiltered)
 
 nrow(tradetestfiltered)
@@ -175,29 +303,88 @@ ncol(tradetestfiltered)
 ncol(moneyfxtestfiltered)
 ncol(tdm.teststackedcategory) 
 
+```
 
-# We now see the number of total rows in stacked trainging TDM and stacked test TDM is equivalent to the sum of total rows for each category TDM.
+
+We now see the number of total rows in stacked training TDM and stacked test TDM is equivalent to the sum of total rows for each category TDM.
+
+********
+********
+
+### Word Cloud For Training Sets For Trade And Moneyfx Categories
+
+findAssocs(tdm.stackedcategory, terms = "billion", corlimit = 0.3)
+
+**Trade Word Cloud**
+
+We find that words like 'trade','billion', 'year' have been more prominently used
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+# Word Cloud for Trade
+
+wordcloud(trade.cleancorpus, max.words =20 , random.order = FALSE, colors = brewer.pal(8,"Dark2"),  scale = c(5,0.5), vfont = c("gothic english","plain"))
 
 
+```
+
+
+**Moneyyfx Word Cloud**
+
+We find that words like 'bank','market', 'pct' 'Ddollar' have been more prominently used.
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+# Word Cloud for Moneyfx
+
+wordcloud(moneyfx.cleancorpus,max.words =20 , random.order = FALSE,colors = brewer.pal(8,"Dark2") ,  scale = c(5,0.5), vfont=c("serif","plain"))
+
+
+
+```
+
+
+********
+
+## R Code : Preparing Data For Model Based Classification
+
+
+Here we separate the training data and test data both from the category column so as to provide to train the model and compare it later for accuracy.
+
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+# training data with only category column specified
 tdm.traincategorycol <- tdm.stackedcategory[,"category"]
+
+# training data without category column specified
 tdm.train <- tdm.stackedcategory[,!colnames(tdm.stackedcategory) %in% "category"]
 
+# test data with only category column specified
 tdm.testcategorycol <- tdm.teststackedcategory[,"category"]
+
+# test data without category column specified
 tdm.test <- tdm.teststackedcategory[,!colnames(tdm.teststackedcategory) %in% "category"]
 
 
-# MODEL KNN (K Nearest Neighbour)
+```
+
+********
+
+###  MODEL KNN (K Nearest Neighbour)
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
 
 knn.pred <- knn(tdm.train, tdm.test, tdm.traincategorycol)
 
 
-# accuracy test
+
+# Accuracy Test
 
 confusion_matx <- table("Predictions" = knn.pred, Actual = tdm.testcategorycol)
 confusion_matx
 
-# Calcculating Accuracy
-accuracy <- sum(diag(confusion_matx))/ nrow(tdm.test) * 100
+# Calculating Accuracy
+accuracy_1 <- sum(diag(confusion_matx))/ nrow(tdm.test) 
+accuracy_1
 
 # Another way to calculate accuracy
 
@@ -209,52 +396,94 @@ false_trade <- 0
      
      
 total <- true_moneyfx + true_trade + false_moneyfx + false_trade
-accuracy <- (true_moneyfx + true_trade) / total 
+accuracy_2 <- (true_moneyfx + true_trade) / total 
+accuracy_2
+error <- 1 - accuracy_2
+error
 
-error <- 1 - accuracy
+```
 
 
+********
+
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
 
 
 container <- create_container(tdm.train, tdm.stackedcategory$category, trainSize=1:907, virgin=FALSE)
 
 predtestcontainer <- create_container(tdm.test, labels= 0:296, testSize = 1:296, virgin=FALSE)
 
+```
 
-# MODEL SVM
+
+
+### MODEL SVM (Support Vector Machine)
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
 
 SVM <- train_model(container,"SVM")
 results.SVM <- classify_model(predtestcontainer, SVM)
-results.SVM
+datatable(results.SVM)
 
 
-# MODEL MAXENT
+```
+
+********
+
+### MODEL MAXENT (Max Entropy)
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
 
 MAXENT <- train_model(container,"MAXENT")
 results.MAXENT <- classify_model(predtestcontainer, MAXENT)
-results.MAXENT
+datatable(results.MAXENT)
 
+```
 
-# MODEL BAGGING
+********
+
+### MODEL BAGGING (Bag)
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
 
 BAGGING <- train_model(container,"BAGGING")
 results.BAGGING <- classify_model(predtestcontainer, BAGGING)
-results.BAGGING
+datatable(results.BAGGING)
 
+```
 
-# MODEL Random Forest
+********
+
+### MODEL Random Forest
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
 
 RF <- train_model(container,"RF")
 results.RF <- classify_model(predtestcontainer, RF)
-results.RF
+datatable(results.RF)
+
+```
 
 
+********
 
-# MODEL TREE
+### MODEL TREE
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
 
 TREE <- train_model(container,"TREE")
 results.TREE <- classify_model(predtestcontainer, TREE)
-results.TREE
+datatable(results.TREE)
+
+```
+
+********
+
+### Performance Comparison Of Different Models
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
 
 
 cat_check <- data.frame(
@@ -266,40 +495,59 @@ cat_check <- data.frame(
      tree = as.character(results.TREE[,1]),
      stringAsFactors = F)
 
-#SVM Performance
+
+# SVM Performance
+
 svm_table <- table(cat_check[,1] == cat_check[,2])
 addmargins(svm_table)
 psvm <- prop.table(svm_table)
 psvm <-as.data.frame(psvm)
 psvm$Model <- "SVM"
 
+
 # MAXENT Performance
+
 maxent_table <- table(cat_check[,1] == cat_check[,3])
 addmargins(maxent_table)
 pmaxent <- prop.table(maxent_table)
 pmaxent <- as.data.frame(pmaxent)
 pmaxent$Model <- "MAXENT"
 
+
 # Bagging Performance
+
 bagging_table <- table(cat_check[,1] == cat_check[,4])
 addmargins(bagging_table)
 pbag <- prop.table(bagging_table)
 pbag <-as.data.frame(pbag)
 pbag$Model <- "BAGGING"
 
+
 # RF Performanace
+
 rf_table <- table(cat_check[,1] == cat_check[,5])
 addmargins(rf_table)
 prf <- prop.table(rf_table)
 prf <- as.data.frame(prf)
 prf$Model <- "RF"
 
+
 # Tree Performanace
+
 tree_table <- table(cat_check[,1] == cat_check[,6])
 addmargins(tree_table)
 ptree <- prop.table(tree_table)
 ptree <-as.data.frame(ptree)
 ptree$Model <- "TREE"
+
+
+```
+
+
+
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
 
 
 pmodels <- rbind.fill(as.data.frame(psvm)
@@ -310,37 +558,44 @@ pmodels <- rbind.fill(as.data.frame(psvm)
 
 
 
+
 colnames(pmodels) <- c("Status" , "Frequency", "Model")
 
-pmodels <- rbind(pmodels, c('FALSE',error,"KNN"),c('TRUE',accuracy,"KNN"))
+pmodels <- rbind(pmodels, c('FALSE',error,"KNN"),c('TRUE',accuracy_2,"KNN"))
+
+
 datatable(pmodels)
 
+```
+
+********
+
+### Plotting Performance Of Models
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+ggplot(pmodels, aes(x=Model, y=Frequency)) + ggtitle("Model Performance Plot") + geom_point(aes(colour = Status), size = 4) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+********
+
+### Conclusion
+
+We find that Random Forest Model and K-Nearest Neighborr gives optimum performance in classifying the documents correctly with 99.32% and 98.31% accuracy respectively.
+Followed by Support Vector Machine 97.97% and Bagging 97.29% accuracy
+Hence Randome Forest would be the best mdel for classifying further test documents dataset for 'Trade' and 'Moneyfx' categories , based on saved models.
+
+
+
+********
 
 
 
 
-ggplot(pmodels, aes(x=Model, y=Frequency)) + scale_y_discrete(labels=seq(0, 1, 0.1)) + ggtitle("Model Performance Plot") + geom_point(aes(colour = Status), size = 5) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 
 
 
-#GLMNET <- train_model(container,"GLMNET")
-
-#SLDA <- train_model(container,"SLDA")
-#BOOSTING <- train_model(container,"BOOSTING")
-
-
-
-
-# Word cloud
-
-#vfont <- c("gothic english","plain")
-#pal <- brewer.pal(8,"Dark2")
-
-#wordcloud(trade.cleancorpus, max.words =20 , random.order = FALSE, colors = brewer.pal(8,"Dark2"),  scale = c(4,0.8), vfont = c("gothic english","plain"))
-#wordcloud(moneyfx.cleancorpus,max.words =20 , random.order = FALSE,colors = brewer.pal(9,"Reds") ,  scale = c(3,0.5), vfont=c("serif","plain"))
-
-
-
-colnames(moneyfx.df)
 
