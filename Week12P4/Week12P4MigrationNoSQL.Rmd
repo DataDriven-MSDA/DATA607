@@ -1,1 +1,386 @@
+---
+title: "Migration From Relational DB to NoSQL DB"
+author: "Kumudini Bhave"
+date: "November 15, 2016"
+output: 
+     html_document:
+          depth : 5
+          theme: united
+          highlight: tango
+---
 
+
+*********
+
+
+## **Migration to NoSQL Databases** {.tabset}
+ 
+ Loading Packages Used
+
+```{r warning=FALSE, comment=FALSE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+knitr::opts_chunk$set(message = FALSE, echo=TRUE)
+
+# Libraries Used : DT , RMySQL, dplyr
+
+# Library for data display in tabular format
+library(DT)
+# Library for db operations
+library(RMySQL)
+# Library for data structure operations
+library(dplyr)
+library(jsonlite)
+library(mongolite)
+
+```
+
+
+
+*********
+
+
+### MongoDB Installation
+
+
+MongoDb (64 bit version) was downloaded and installed in default directory under "C:\\Program Files"
+The new mongolite package was used for client connectivity from R to MongoDB database.
+
+
+To set up the MongoDB environment:
+
+MongoDB requires a data directory to store all data. MongoDB's default data directory path is \\data\\db.
+Hence directory for data and log is created
+
+"F:\\mongodb\\data"
+"F:\\mongodb\\log"
+
+The mongodb startup requires 
+
+
+The following command 
+"C:\\Program Files\\MongoDB\\Server\\3.2\\bin\\mongod.exe" --dbpath F:\\mongodb\\data
+
+
+To connect to MongoDB:
+
+One needs to start the mongo.exe shell in another Command Prompt.
+
+"C:\\Program Files\\MongoDB\\Server\\3.2\\bin\\mongo.exe"
+
+The default database is 'test'
+
+In mongo sheel one can connect to test using following command at mongo shell prompt :
+
+>use test
+
+One can check the collections ( equivalent to tables concept from relational databases) using :
+
+>show collections
+
+The default collection available in 'test' database is 'restaurants'
+
+*********
+
+#### References:
+
+The MongoDB Manual : (https://docs.mongodb.com/manual/crud/
+
+Tutorial Mongolite : https://cran.r-project.org/web/packages/mongolite/mongolite.pdf
+
+*********
+ 
+### MongoDB : Connection, Populating
+
+*********
+
+A connection to MYSQL relational databse is done and the data from 'entertainment' schema and 'tb' schema are extracted to perform a migration to NoSQL database of MongoDB.
+
+*********
+
+#### MYSQL Connection
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+mysql_dbconn <- function(schema, uid, pwd){
+  
+     rmysql.settingsfile<-"C:/ProgramData/MySQL/MySQL Server 5.6/my.ini"
+     conn <- dbConnect(RMySQL::MySQL(), dbname = schema, username=uid ,password = pwd)
+     return(conn)          
+}
+
+```
+
+
+*********
+
+#### Forming MYSQL DB Connection
+
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+conntb <- mysql_dbconn("tb","root","WhiteLotus21")
+
+# List the database tables in entertainment schema
+entdbtables <- dbListTables(conntb)
+
+```
+
+
+*********
+
+#### Capturing tb database and entertainment database from MYSQL 
+
+Loading tb and movie data in R
+
+```{r tidy=TRUE, tidy.opts=list(width.cutoff=80), echo=TRUE}
+
+
+if(isIdCurrent(conntb))
+{
+     tbdb <-  dbGetQuery(conntb,"select country, year, sex, child, adult, elderly from tb where tb.year > 2010")
+     
+}
+    
+
+connent <- mysql_dbconn("entertainment","root","WhiteLotus21")
+
+if(isIdCurrent(conntb))
+{ 
+     moviesdb <-  dbGetQuery(connent,"select movieid, moviename, genre, yearreleased, leadcast, dirrectedby, countryreleased, language, watchtimemin, certificate, awards, info from movies, genre, certificate where movies.genre = genre.genreid and movies.certificate = certificate.certificateid")
+     
+      genredb <-  dbGetQuery(connent,"select genreid, genretype from genre")
+
+      certificatedb <- dbGetQuery(connent,"select certificateid, certificatedesc from certificate")
+     
+      surveydb <- dbGetQuery(connent,"select respondentid, movieid, rating, responsedt from survey")
+      
+     
+  
+}
+```
+
+
+*********
+
+
+
+#### MongoDB : Forming Connection, Checking For Existin "Restaurants" Collection in 'test' db
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+c = mongo(collection = "restaurants", db = "test")
+c$count()
+
+```
+
+
+#### MongoDB : Checking For Existing "tb" Collection in 'tbdatabase' db
+
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+# To take care of the insertion of 'tb' data during the re-run of this Rmd , we drop it initially if existing at all
+
+
+
+tb = mongo(collection = "tb", db = "tbdatabase")
+tb$count()
+
+tb$insert(tbdb)
+tb$count()
+
+
+```
+
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+# To take care of the insertion of 'tb' data during the re-run of this Rmd , we drop it at the end.
+
+tb$drop()
+
+```
+
+#### MongoDB : Checking For Existing "entertainment" Collection in 'entertainment' db
+
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+mov = mongo(collection = "movies", db = "entertainment")
+gen = mongo(collection = "genre", db = "entertainment")
+cert = mongo(collection = "certificate", db = "entertainment")
+
+survey = mongo(collection = "survey", db = "entertainment")
+
+```
+
+
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+# To take care of the insertion of all collections in 'entertainment' database during the re-run of this Rmd , we drop it at the end.
+
+
+survey$drop()
+gen$drop()
+cert$drop()
+mov$drop()
+```
+
+
+#### Populating the dataframes from MYSQL to MongoDB
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+mov$count()
+mov$insert(moviesdb)
+
+
+gen$count()
+gen$insert(genredb)
+
+
+cert$count()
+cert$insert(certificatedb)
+
+
+
+survey$count()
+survey$insert(surveydb)
+
+
+
+
+
+mov$count()
+gen$count()
+cert$count()
+survey$count()
+
+```
+
+*********
+
+### MongoDB : Data Retrieval
+
+********* 
+
+#### Basic Data Retrieval
+
+*********
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+
+# Selecting distinct respondents from Survey collection
+
+survey$distinct("respondentid")
+
+
+# Select respondent ids who did ot respond/ rate to MN1 movie code, ie Ice Age
+
+survey$distinct("respondentid", '{"movieid" : "MN1", "rating": null }')
+
+# Select respondent ids who respond/ rate to MN1 movie code, ie Ice Age , handle null
+
+survey$find('{"movieid" : "MN1"}', handler = NULL)
+
+
+
+
+# Add index and sort By Rating
+
+survey$index(add="rating")
+
+mysurveydata <- survey$find(sort='{"rating":-1}')
+datatable(mysurveydata)
+
+```
+
+
+********
+
+#### Find Movie And Average Rating
+
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+survey$aggregate( '[{"$group":{"_id" : "$movieid","avgRating" : {"$avg" : "$rating"}}}]')
+
+
+# Logical And
+
+western2016 <- mov$find('{"genre":"W","yearreleased":2016}')
+
+datatable(western2016)
+
+# Movie Either Animated OR Action , Sorted By Movie Name Descending
+
+actionanimation <- mov$find('{"genre": { "$in" : ["N","A"]}}',fields = '{"moviename":1,"leadcast":1,"info":1} ', sort='{"moviename" : -1}')
+
+datatable(actionanimation)
+
+ 
+# Movies (Either Western OR Horror) And Released In 2016
+ 
+westernorhorror2016 <-  mov$find('{"genre": { "$in" : ["W","H"]} , "yearreleased" : 2016 }',fields = '{"moviename":1,"leadcast":1,"info":1}')
+
+
+
+datatable(westernorhorror2016)
+
+# The collection can be stored to file and restored back
+
+# Dump to bson
+dump <- tempfile()
+mov$export(file(dump), bson = TRUE)
+
+# Remove the collection
+mov$drop()
+
+# Restore
+mov$count()
+mov$import(file(dump), bson = TRUE)
+file(dump)
+mov$count()
+
+
+# Attempt to insert Json file in MongoDB
+
+#donut <- mongo("zips", verbose=FALSE)
+
+
+#donutdf <- stream_in(url("https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week12P4/donut.json"))
+                           
+#donut$insert(donutdf)
+
+#Alternatively
+
+#stream_in(url("https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week12P4/donut.json"),handler=function(df){donut$insert(df)})
+
+
+# Could not import, This gives an error premature EOF
+
+```
+
+
+*********
+
+### MongoDB (NoSQL) Compared To Relational (MYSQL / Oracle)
+
+*********
+
+MongoDB is an open source document-oriented NoSQL database which stores data in the form of JSON-like objects.
+Hence a collection in MongoDB is equivalent to Table in relational database
+And a document in a collection in MongoDB is equivalent to a row in relational database table.
+
+NoSQL and relational databses differ in the manner they represent data.
+While a row stores data in columns, document stores in JSON like structure.
+
+MongoDB documents support dynamic schema, i.e. documents in same collection can have different schema , one can have 5 fileds , while other can have more or less than five.
+This allows complex hierarchical /tree structured schemas is be efficiently stored in MongoDB.
+
+Relationships in relational databse can be achieved through primary key /foreign key constraints ; No such mapping is present in MongoDB other than linking / emnbedding of documents .
+
+However the document type representation and the unconventional way of querying seems to be bit hard to get used to syntactically.
+The plain english like SQL of relational database seems more easy to adapt to.
+
+*********
