@@ -345,7 +345,7 @@ mov$count()
 
 # Attempt to insert Json file in MongoDB
 
-#donut <- mongo("zips", verbose=FALSE)
+#donut <- mongo("zips", verbose=FALSE, db = "entertainment")
 
 
 #donutdf <- stream_in(url("https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week12P4/donut.json"))
@@ -358,6 +358,16 @@ mov$count()
 
 
 # Could not import, This gives an error premature EOF
+
+restaurants <- mongo("restaurants", verbose=FALSE, db = "entertainment")
+restaurants$drop()
+restaurants$count()
+
+
+
+restaurants$import(url("https://raw.githubusercontent.com/mongodb/docs-assets/primer-dataset/primer-dataset.json"))
+
+restaurants$count()
 
 ```
 
