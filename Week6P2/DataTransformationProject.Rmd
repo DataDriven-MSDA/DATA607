@@ -1,0 +1,347 @@
+---
+title: "Data Transformation Project"
+author: "Kumudini Bhave"
+date: "October 23, 2016"
+output:
+  html_document:
+    fontsize: 17pt
+    highlight: pygments
+    theme: cerulean
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+---
+     
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+********
+     
+# **Data Transformation :  Using *tidyr* and *dplyr* Packages**
+     
+********
+     
+     
+## Summary
+     
+ 
+We make an attempt to acquire different datasets, process them into R readable format of data frame and perform data transformation in long /wide formats using tidyr / dplyr / reshape  packages.
+  
+     
+********
+
+## R Code :
+     
+     
+### Environment Setup
+
+Loading Packages Used
+
+
+```{r warning=FALSE, comment=FALSE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+knitr::opts_chunk$set(message = FALSE, echo=TRUE)
+
+# Library to read data file
+library(RCurl)
+library(stringr)
+library(knitr)
+     
+library(ggplot2)
+
+# Library for data display in tabular format
+library(DT)
+library(tidyr)
+library(dplyr)
+library(reshape)
+```
+     
+
+********
+
+### Different Data Formats
+
+Data available in HTML, JSON and XML formats are loaded.
+
+The data files considered are in following format. Below are the github links to the data files.
+
+
+********
+
+### Data Set 1 : Birth DataSet {.tabset}
+
+
+#### Loading Data /Cleansing
+
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+
+birthdata.giturl <- "https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week6P2/birthdata.csv"
+
+
+birthdata.gitdata <- getURL(birthdata.giturl)
+
+
+birthdata <- read.csv2(text=birthdata.gitdata,                      header=T,sep=",",dec=".",stringsAsFactors= FALSE)
+
+# Verifying records and variables
+
+nrow(birthdata)
+ncol(birthdata)
+head(birthdata)
+
+
+
+# Renaming Columns
+colnames(birthdata) <- c("Case","MotherAge","BabyYear_1","BabyYear_2","BabyYear_3","BabyWt_1","BabyWt_2","BabyWt_3")
+
+# Display data frame content
+datatable(birthdata, rownames=FALSE)
+
+```
+
+
+#### Data Transformation
+
+Using reshape package
+
+The birth data is available on wide format.
+Converting to long with relevant columns , Using reshape() to convert to long format
+
+Reshape() provides the best way to solve this kind of dataset.
+The column names need to follow a proper format to convert to long.
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+
+birthdatalong <- reshape(birthdata, varying=c("BabyYear_1","BabyYear_2","BabyYear_3", "BabyWt_1", "BabyWt_2", "BabyWt_3"), direction ="long", idvar="Case", sep="_")
+
+
+datatable(birthdatalong, rownames=FALSE)
+
+
+```
+
+#### Analyzing Birth DataSet
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+# Average baby Weight ForEeach Mother
+
+     birthdata_meanbabywt <- birthdatalong %>% select( Case, BabyWt) %>% group_by(Case) %>%  dplyr::summarise(AvgBabyWt = mean(BabyWt, na.rm=TRUE))
+
+birthdata_meanbabywt
+
+
+# Average Mother Age For Each BabyBirth
+
+     birthdata_meanbabywtage <- birthdatalong %>% select( time, MotherAge) %>% group_by(time) %>%  dplyr::summarise(AvgMotherAgeFirstBaby = mean(birthdatalong$MotherAge, na.rm=TRUE)) 
+
+
+library(scales)     
+     
+ggplot(birthdatalong, aes(y=birthdatalong$BabyWt, x=birthdatalong$MotherAge)) + geom_point(aes(color=factor(Case), group=Case)) + scale_color_discrete(name="Case") + labs(title = "Mother Age Vs Baby Weight ", x= "Mother Age", y="Baby Weight") 
+
+
+
+```    
+
+
+Since there are many NA values , and also the point may be over lapping in the plot.
+
+
+
+
+********
+
+### Data Set 2 : CitiBike {.tabset}
+
+Courtesy : Dataset from Sharon Morris
+
+#### Loading Data
+
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+
+bike.giturl <- "https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week6P2/201606-citibike-tripdata.csv"
+
+
+bike.gitdata <- getURL(bike.giturl)
+
+
+bikedata <- read.csv2(text=bike.gitdata,                      header=T,sep=",",dec=".",stringsAsFactors= FALSE)
+
+# Verifying records and variables
+
+nrow(bikedata)
+ncol(bikedata)
+datatable(head(bikedata))
+
+###############################################################################
+
+```
+
+
+#### Data Cleansing
+
+Lets select only the columns that  we need to focus on for gender based trip duration between stations
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+head(bikedata)
+
+colnames(bikedata) <- c("tripduration","starttime","stoptime","startid","startname","startlat","startlong","stopid","stopname","stoplat","stoplong","bikeid","usertype","birthyear","gender")
+
+
+bikedata <- bikedata %>% dplyr::select(tripduration,starttime,stoptime,startid,stopid,usertype,gender)
+
+
+###############################################################################   
+```
+   
+   
+    
+#### Data Transformation/ Analyzing
+
+          
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+# Since the data is too large we filter the same. Choosing trip duration(since it is in seconds) for greater than 5 hours
+          
+bikedatasub_18k <- bikedata %>% dplyr::filter( tripduration >= 18000) 
+
+# Adding Column of tripduration in hours
+
+bikedatasub_triphr <- bikedatasub_18k %>% mutate(round(triphours = tripduration /3600))
+
+     
+# caclulate mean time taken between Stations :Lexington Ave And Pearl St from base bike data
+
+bikedatasub2 <- bikedata %>%  filter(startid == "120" & stopid == "82") %>% mutate(tripname = "LexPearl") %>%   summarize(Meantime=mean(tripduration, na.rm = TRUE))
+
+bikedatasub2
+
+# Finding total number of different trips in  bikedata set for above 5 hours and the mean time for each trip and arrange descending mean trip duration
+
+bikedatasub_tripsnmean <- bikedatasub_18k %>%
+  group_by(startid,stopid) %>% summarize(total = n(), tripmeantime = mean(tripduration, na.rm = TRUE))  %>%  arrange(desc(tripmeantime))
+
+
+datatable(bikedatasub_tripsnmean)
+
+# grouping by usertype
+
+bikedatasub3<- bikedatasub_18k %>%  group_by(usertype) %>%  dplyr::summarise(avgdurn = mean(bikedatasub_18k$tripduration, totaltrip = n()))
+
+
+###############################################################################
+```
+
+
+********
+
+### Data Set 3 : Religion And Income  {.tabset}
+
+
+(Courtesy : Dataset from Marco Sequeira)
+
+#### Loading Data
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+relinc.giturl <- "https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week6P2/religionincome.csv"
+
+
+relinc.gitdata <- getURL(relinc.giturl)
+
+
+relincdata <- read.csv2(text=relinc.gitdata, header=T,sep=",",dec=".",stringsAsFactors= FALSE)
+
+# Verifying records and variables
+
+nrow(relincdata)
+ncol(relincdata)
+head(relincdata)
+
+###############################################################################
+```
+
+
+#### Data Cleansing
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+# Renaming Columns
+
+colnames(relincdata) <- c("Tradition","ForLessThan30","From30To49","From50To99","MoreThan100","Sample")
+
+
+# Removing % sign from the Columns
+
+relincdata$ForLessThan30 <- as.numeric(str_extract(relincdata$ForLessThan30,"[[:digit:]]{2,}"))
+
+relincdata$From30To49 <- as.numeric(str_extract(relincdata$From30To49,"[[:digit:]]{2,}"))
+
+relincdata$From50To99 <- as.numeric(str_extract(relincdata$From50To99,"[[:digit:]]{2,}"))
+
+relincdata$MoreThan100 <- as.numeric(str_extract(relincdata$MoreThan100,"[[:digit:]]{2,}"))
+
+# Removing , from Sample
+
+relincdata$Sample <- as.numeric(gsub(",","", relincdata$Sample))
+
+# Display data frame content
+datatable(relincdata, rownames=FALSE)
+
+
+
+###############################################################################
+```
+
+********
+
+####  Data Transformation/ Analysis
+
+Using tidyr package
+
+
+Using gather() to convert to long format
+
+
+```{r  tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+tidyrelincdata <- relincdata %>% 
+     gather( "Category", "Pct", 2 :5, na.rm=FALSE)
+
+
+tidyrelincdata$PctVal =round(((as.numeric(tidyrelincdata$Pct )/ 100)  * as.numeric(tidyrelincdata$Sample)) , 2)
+
+datatable(tidyrelincdata)
+
+
+  G <- ggplot(tidyrelincdata, aes(x=tidyrelincdata$Category,y=tidyrelincdata$PctVal)) + geom_point(aes(color=Tradition)) + ggtitle("Religion And Income Categoris") + xlab("Category") +  ylab("People In Category")
+    
+  G
+
+```     
+
+
+From the plot we notice that Evangelist Protestant followers are the maximum working in less than 30K category as well as in the 50k - 99k category
+
+While themore than 100 K category is led by Unaffiliated followers.
+
+The least in each category are Orthodox Christian followers.
+
+
+********     
