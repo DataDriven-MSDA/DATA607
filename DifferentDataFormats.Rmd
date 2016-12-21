@@ -1,0 +1,191 @@
+---
+title: "Different Data Formats"
+author: "Kumudini Bhave"
+date: "October 23, 2016"
+output:
+  html_document:
+    fontsize: 17pt
+    highlight: pygments
+    theme: cerulean
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+---
+     
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+********
+     
+# **Different Data Formats**
+     
+********
+     
+     
+## Summary
+     
+ 
+We make an attempt to acquire data in different formats and use appropriate packages to acquire / load and process them into R readable format of data frame.
+  
+     
+********
+
+## R Code :
+     
+     
+### Environment Setup
+
+Loading Packages Used
+
+
+```{r warning=FALSE, comment=FALSE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+knitr::opts_chunk$set(message = FALSE, echo=TRUE)
+
+# Library to read data file
+library(RCurl)
+
+library(knitr)
+
+# For loading XML, JSON Data files
+library(XML)
+library(jsonlite)
+library(htmltab)
+
+# Library for data display in tabular format
+library(DT)
+
+
+```
+     
+
+********
+
+### Different Data Formats
+
+Data available in HTML, JSON and XML formats are loaded.
+
+The data files considered are in following format. Below are the github links to the data files.
+
+
+#### **Data Files**     
+
+[HTML](https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week7A/myfavbookshtml.html)
+ 
+[JSON](https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week7A/myfavbooksjson.json)
+
+
+[XML](https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week7A/myfavbooksxml.xml)
+
+
+********
+
+### HTML Data Acquisition
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+html.giturl <- "https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week7A/myfavbookshtml.html"
+
+# The htmltab() from package HTMLTAB directly gives data frame as output.
+
+book.html <- htmltab::htmltab(html.giturl)
+
+class(book.html)
+
+# Verifying records and variables
+
+nrow(book.html)
+ncol(book.html)
+
+# Renaming Columns
+colnames(book.html) <- c("Title","Authors","Genre","Language","Publisher","Pages","Rating","Price(INR)")
+
+# Display data frame content
+datatable(book.html, rownames=FALSE)
+
+```
+
+********
+
+### JSON Data Acquisition
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+
+json.giturl <- "https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week7A/myfavbooksjson.json"
+
+json.baseurlstr <- paste(readLines(json.giturl),collapse="")
+
+
+book.jsondata <- fromJSON(json.baseurlstr)
+
+class(book.jsondata)
+
+
+# converting to Data Frame.
+
+book.json <- as.data.frame(book.jsondata)
+
+# Verifying records and variables
+nrow(book.json)
+ncol(book.json)
+
+# Renaming Columns
+colnames(book.json) <- c("Title","Authors","Genre","Language","Publisher","Pages","Rating","Price(INR)")
+
+# Display data frame content
+datatable(book.json, rownames=FALSE)
+
+
+```
+
+
+********
+
+### XML Data Acquisition
+
+
+```{r  warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=80),echo=TRUE}
+
+
+xml.giturl <- "https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/Week7A/myfavbooksxml.xml"
+
+book.xmldata <- xmlParse(getURL(xml.giturl)) # get XML file contents
+
+class(book.xmldata)
+xmlSize(book.xmldata)
+
+# Converting to data frame
+
+book.xml <- xmlToDataFrame(book.xmldata)
+
+# Verifying records and variables
+
+nrow(book.xml)
+ncol(book.xml)
+head(book.xml)
+
+# Renaming Columns
+
+colnames(book.xml) <- c("Title","Authors","Genre","Language","Publisher","Pages","Rating","Price(INR)")
+
+# Display data frame content
+datatable(book.xml, rownames=FALSE)
+
+
+```
+
+********
+
+The identical data frames are obtained although the source data formats were different.
+
+Thus we observe that data can be acquired and loaded in different formats with usage of appropriate loading libraries and processing steps.
+
+
+********     
