@@ -5,7 +5,7 @@
                 "id": "1",
                 "Title": "Birbal the Witty",
                 "Authors": "Kamala Chandrakant",
-                "Genre": "Children's Books",
+                "Genre": "Children",
                 "Language": "English",
                 "Publisher": "Amar Chitra Katha",
                 "Pages": "32",
@@ -18,8 +18,8 @@
                 "Authors": [
                             "Anant Pai", 
                             "Kamala Chandrakant"
-                           ]
-                "Genre": "Children's Books",
+                           ],
+                "Genre": "Children",
                 "Language": "English",
                 "Publisher": "Amar Chitra Katha",
                 "Pages": "96",
@@ -44,7 +44,7 @@
                             "Bill Gates",
                             "Nathan Myhrvold",
                             "Peter Rinearson"
-                           ]
+                           ],
                 "Genre": "Young Adult, Business",
                 "Language": "English",
                 "Publisher": "Penguin Books",
