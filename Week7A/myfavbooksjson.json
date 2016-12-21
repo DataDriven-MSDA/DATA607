@@ -2,7 +2,6 @@
     "booklist":{
         "book": [
 	        {
-                "id": "1",
                 "Title": "Birbal the Witty",
                 "Authors": "Kamala Chandrakant",
                 "Genre": "Children's Books",
@@ -13,7 +12,6 @@
                 "PriceINR": "67"
             },
             {
-                "id": "2",
                 "Title": "Tales from the Panchatantra",
                 "Authors": [
                             "Anant Pai", 
@@ -27,7 +25,6 @@
                 "PriceINR": "250"
             },
             {
-                "id": "3",
                 "Title": "Oliver Twist",
                 "Authors": "Charles Dickens",
                 "Genre": "Young Adult",
@@ -38,7 +35,6 @@
                 "PriceINR": "150"
             },
             {
-                "id": "4",
                 "Title": "The Road Ahead",
                 "Authors": [
                             "Bill Gates",
@@ -53,7 +49,6 @@
                 "PriceINR": "1250"
             },
             {
-                "id": "5",
                 "Title": "R In Action",
                 "Authors": "Robert L. Kabacoff",
                 "Genre": "Computer Science",
