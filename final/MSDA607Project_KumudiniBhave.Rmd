@@ -1,0 +1,1052 @@
+---
+title: "607 Final Project : Global Nutrition & Urbanization
+Correlation And Other Effects On Under 5 Development "
+author: "Kumudini Bhave"
+date: "December 18, 2016"
+output:
+  html_document:
+    highlight: pygments
+    theme: cerulean
+    code_folding: hide
+---
+
+
+********
+
+##  Rationale {.tabset}
+
+
+**Nutrition is essential and World Health Organization has a baseline of the daily essential factors that human body needs to lead a healthy life.**
+
+**As the economic, social and environmental conditions across the globe are not same, we observe disparity in the nutrition that the inhabitants of different countries receive.**
+
+**While we know that poverty inflicted countries would suffer malnutrition, an attempt here is to understand how urbanization has impacted and how even those economies that are developing and well above poverty line are facing 'Malnutrition', which is under nutrition and over nutrition.**
+
+** Through this analysis we hope to find what affects the nutrition which is the so primary in healthy development of under 5 children**
+
+
+
+###  Data {.tabset}
+
+#### Environment Set Up
+
+
+```{r paraset, warning=FALSE, comment=FALSE, message=FALSE, echo=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+knitr::opts_chunk$set(message = FALSE, echo=TRUE)
+
+# Setting parameters for plotting googleVis plots
+
+library(googleVis)
+suppressPackageStartupMessages(library(googleVis))
+op <- options(gvis.plot.tag = 'chart')
+
+```
+
+```{r libload, warning=FALSE, comment=FALSE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+
+
+# Library for string manipulation/regex operations
+library(stringr)
+# Library for data display in tabular format
+library(DT)
+# Library to read text file
+library(RCurl)
+# Library to gather (to long format) and spread (to wide format) data, to tidy data
+library(tidyr)
+# Library to filter, transform data
+library(dplyr)
+
+
+# Library to plot
+library(ggplot2)
+library(knitr)
+
+
+# Library for loading data from World Bank
+
+library(WDI)
+
+library(ggmap)
+
+library(grid)
+
+#options(gvis.print.tag='html')
+
+```
+
+
+#### Loading DataSets
+
+The Nutrition Data has been sourced from Harvard Data Website.
+
+[Hardvard Nutrition Dataset](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/MUOX19)
+
+And Other complementary data has been sourced from World Bank Resources.
+
+[World Bank Data](http://data.worldbank.org/indicator?tab=all)
+
+Numerous Indicators are available , so some that have provoked thoughts in align with the nutrition data have been picked for analysis.
+
+
+
+```{r dataload, warning=FALSE,  tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+# Accessing World Bank Data through API 
+# The World Bank Data can be accessed through their API which is provided through R Package WDI.
+# A basic search by the following function
+# WDIsearch('female.*emp*')[1:50,]
+# gives the related indicators , one can choose from to load the World Bank data  into R and  do further analysis
+
+
+
+# Urban % of Population
+
+urbanPopdat <- WDI(indicator='SP.URB.TOTL.IN.ZS', start=2010, end=2014)
+#urbanPopdat <- na.omit(urbanPopdat)
+urbanPopdat <- subset(urbanPopdat[,2:4])
+colnames(urbanPopdat ) <- c("country", "urbanrate","year")
+#View(urbanPopdat)
+
+
+
+# Indicator Of Women : Who Have Educational attainment, at least competed lower secondary, population 25+, total (%) 
+
+
+eduLowSecFemale <- WDI(indicator='SE.SEC.CUAT.LO.FE.ZS', start=2010, end=2014)
+eduLowSecFemale <- subset(eduLowSecFemale[,2:4])
+colnames(eduLowSecFemale ) <- c("country", "feduval","year")
+#View(eduLowSecFemale)
+
+# Indicator Of Women Working % Employment in services, female
+
+empFemale <- WDI(indicator='SL.SRV.EMPL.FE.ZS', start=2010, end=2014)
+empFemale <- subset(empFemale[,2:4])
+colnames(empFemale ) <- c("country", "fempval","year")
+#View(empFemale)
+
+ #Improved Water resources % population with access: SH.H2O.SAFE.ZS
+
+watersrc <- WDI(indicator='SH.H2O.SAFE.ZS', start=2010, end=2014)
+watersrc <- subset(watersrc[,2:4])
+colnames(watersrc) <- c("country", "waterval","year")
+#View(watersrc)
+
+
+# Accessing Nutrition Data
+#2015GNRDataset_Child-Adult-Nutrition
+
+data.giturl<-"https://raw.githubusercontent.com/DataDriven-MSDA/DATA607/master/final/GNR.csv"
+gnr.gitdata <- getURL(data.giturl)
+gnr.csv <- read.csv2(text=gnr.gitdata, header=T, sep=",",stringsAsFactors = FALSE)
+#View(gnr.csv)
+
+# Number Of Countries 
+nrow(gnr.csv)
+
+################################################################
+
+# Subsetting variables from Nutrition DataSet
+
+###############################################################
+
+
+gnrsub <- subset(gnr.csv, select=c(country, continent,regionUN,subregionUN, year_stunting_current, prev_stunting_current, number_stunting_current, year_wasting, prev_wasting,number_wasting,year_sev_wasting,
+number_sev_wasting,prev_sev_wasting,year_u5overweight,
+prev_u5overweight,number_u5overweight,year_lbw,
+LBW,year_stuntingtrend1,rate_stuntingtrend1,
+year_stuntingtrend2,rate_stuntingtrend2,
+year_stuntingtrend3,rate_stuntingtrend3,
+year_stuntingtrend4,rate_stuntingtrend4,
+year_stuntingtrend5,rate_stuntingtrend5,
+year_heightBMI,prev_height145,
+year_WRAanaemia,WRAanaemia_RATE,WRAanaemia_NUMBER,
+year_vitA_def,prevalence_vita,year_IodineNutrition,Class_IodineNutrition
+ ))
+
+
+#View(gnrsub)
+
+```
+
+
+#### Data Cleansing And Transformation
+
+##### Data Cleaning
+
+ Many Country name swere found a bit mismatching among the World Bank Data and The Nutrition Dataset.
+ These were identified and made consistent among all the indicator data and nutrition data.
+
+```{r dataclean, warning=FALSE, comment=FALSE,  tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+
+##################################################
+
+###   Cleaning Data To Match Country Name Mismatch
+
+##################################################
+
+#Cleaning  Country names for Urban Population Data
+xurban <- nrow(urbanPopdat)
+
+for(i in 1:xurban)  
+{  
+     if (urbanPopdat$country[i] == 'Bahamas, The'){
+          urbanPopdat$country[i] = 'Bahamas'
+     }
+      if (urbanPopdat$country[i] == 'Cabo Verde'){
+          urbanPopdat$country[i] = 'Cape Verde'
+      }
+      if (urbanPopdat$country[i] == 'Congo, Dem. Rep.'){
+          urbanPopdat$country[i] = 'Democratic Republic of the Congo'
+      }
+     if (urbanPopdat$country[i] == 'Congo, Rep.'){
+          urbanPopdat$country[i] = 'Congo Republic'
+     }
+     if (urbanPopdat$country[i] == 'Egypt, Arab Rep.'){
+          urbanPopdat$country[i] = 'Egypt'
+     }
+     if (urbanPopdat$country[i] == 'Gambia, The'){
+          urbanPopdat$country[i] = 'Gambia'
+     }
+     if (urbanPopdat$country[i] == 'Iran, Islamic Rep.'){
+          urbanPopdat$country[i] = 'Iran'
+     }
+     if (urbanPopdat$country[i] == 'Kyrgyz Republic'){
+          urbanPopdat$country[i] = 'Kyrgyzstan'
+     }
+     if (urbanPopdat$country[i] == 'Korea, Dem. Peopleâ???Ts Rep.'){
+          urbanPopdat$country[i] = "Democratic People's Republic of Korea"
+     }
+     if (urbanPopdat$country[i] == 'Korea, Rep.'){
+          urbanPopdat$country[i] = "Republic of Korea"
+     }
+       if (urbanPopdat$country[i] == 'Micronesia, Fed. Sts.'){
+          urbanPopdat$country[i] = "Micronesia (Federated States of)"
+       }
+       if (urbanPopdat$country[i] == 'Moldova'){
+          urbanPopdat$country[i] = "Republic of Moldova"
+       }
+       if (urbanPopdat$country[i] == 'Slovak Republic'){
+          urbanPopdat$country[i] = "Slovakia"
+       }
+       if (urbanPopdat$country[i] == 'St. Kitts and Nevis'){
+          urbanPopdat$country[i] = "Saint Kitts and Nevis"
+       }
+       if (urbanPopdat$country[i] == 'St. Lucia'){
+          urbanPopdat$country[i] = "Saint Lucia"
+       }
+       if (urbanPopdat$country[i] == 'St. Vincent and the Grenadines'){
+          urbanPopdat$country[i] = "Saint Vincent and the Grenadines"
+       }
+      if (urbanPopdat$country[i] == 'Macedonia, FYR'){
+          urbanPopdat$country[i] = "The former Yugoslav Republic of Macedonia"
+      }
+      if (urbanPopdat$country[i] == 'Tanzania'){
+          urbanPopdat$country[i] = "United Republic of Tanzania"
+      }
+      if (urbanPopdat$country[i] == 'Venezuela, RB'){
+          urbanPopdat$country[i] = "Venezuela"
+      }
+      if (urbanPopdat$country[i] == 'Yemen, Rep.'){
+          urbanPopdat$country[i] = "Yemen"
+       }
+       if (urbanPopdat$country[i] == 'Yemen, Rep.'){
+          urbanPopdat$country[i] = "Yemen"
+       }
+      if (urbanPopdat$country[i] == 'United States'){
+          urbanPopdat$country[i] = "United States of America"
+      }
+     if (urbanPopdat$country[i] == 'Syrian Arab Republic'){
+          urbanPopdat$country[i] = "Syria"
+      }
+     
+     
+     
+}
+            
+
+# Cleaning Country Names :For Female Education Data
+
+xedu <- nrow(eduLowSecFemale)
+for(i in 1:xedu)  
+{  
+     if (eduLowSecFemale$country[i] == 'Bahamas, The'){
+          eduLowSecFemale$country[i] = 'Bahamas'
+     }
+      if (eduLowSecFemale$country[i] == 'Cabo Verde'){
+          eduLowSecFemale$country[i] = 'Cape Verde'
+      }
+      if (eduLowSecFemale$country[i] == 'Congo, Dem. Rep.'){
+          eduLowSecFemale$country[i] = 'Democratic Republic of the Congo'
+      }
+     if (eduLowSecFemale$country[i] == 'Congo, Rep.'){
+          eduLowSecFemale$country[i] = 'Congo Republic'
+     }
+     if (eduLowSecFemale$country[i] == 'Egypt, Arab Rep.'){
+          eduLowSecFemale$country[i] = 'Egypt'
+     }
+     if (eduLowSecFemale$country[i] == 'Gambia, The'){
+          eduLowSecFemale$country[i] = 'Gambia'
+     }
+     if (eduLowSecFemale$country[i] == 'Iran, Islamic Rep.'){
+          eduLowSecFemale$country[i] = 'Iran'
+     }
+     if (eduLowSecFemale$country[i] == 'Kyrgyz Republic'){
+          eduLowSecFemale$country[i] = 'Kyrgyzstan'
+     }
+     if (eduLowSecFemale$country[i] == 'Korea, Dem. Peopleâ???Ts Rep.'){
+          eduLowSecFemale$country[i] = "Democratic People's Republic of Korea"
+     }
+     if (eduLowSecFemale$country[i] == 'Korea, Rep.'){
+          eduLowSecFemale$country[i] = "Republic of Korea"
+     }
+       if (eduLowSecFemale$country[i] == 'Micronesia, Fed. Sts.'){
+          eduLowSecFemale$country[i] = "Micronesia (Federated States of)"
+       }
+       if (eduLowSecFemale$country[i] == 'Moldova'){
+          eduLowSecFemale$country[i] = "Republic of Moldova"
+       }
+       if (eduLowSecFemale$country[i] == 'Slovak Republic'){
+          eduLowSecFemale$country[i] = "Slovakia"
+       }
+       if (eduLowSecFemale$country[i] == 'St. Kitts and Nevis'){
+          eduLowSecFemale$country[i] = "Saint Kitts and Nevis"
+       }
+       if (eduLowSecFemale$country[i] == 'St. Lucia'){
+          eduLowSecFemale$country[i] = "Saint Lucia"
+       }
+       if (eduLowSecFemale$country[i] == 'St. Vincent and the Grenadines'){
+          eduLowSecFemale$country[i] = "Saint Vincent and the Grenadines"
+       }
+      if (eduLowSecFemale$country[i] == 'Macedonia, FYR'){
+          eduLowSecFemale$country[i] = "The former Yugoslav Republic of Macedonia"
+      }
+      if (eduLowSecFemale$country[i] == 'Tanzania'){
+          eduLowSecFemale$country[i] = "United Republic of Tanzania"
+      }
+      if (eduLowSecFemale$country[i] == 'Venezuela, RB'){
+          eduLowSecFemale$country[i] = "Venezuela"
+      }
+      if (eduLowSecFemale$country[i] == 'Yemen, Rep.'){
+          eduLowSecFemale$country[i] = "Yemen"
+       }
+       if (eduLowSecFemale$country[i] == 'Yemen, Rep.'){
+          eduLowSecFemale$country[i] = "Yemen"
+       }
+      if (eduLowSecFemale$country[i] == 'United States'){
+          eduLowSecFemale$country[i] = "United States of America"
+      }
+     if (eduLowSecFemale$country[i] == 'Syrian Arab Republic'){
+          eduLowSecFemale$country[i] = "Syria"
+      }
+     
+     
+     
+}
+            
+# Cleaning Country Names For Female Employment
+
+xemp <- nrow(empFemale)
+
+for(i in 1:xemp)  
+{  
+     if (empFemale$country[i] == 'Bahamas, The'){
+          empFemale$country[i] = 'Bahamas'
+     }
+      if (empFemale$country[i] == 'Cabo Verde'){
+          empFemale$country[i] = 'Cape Verde'
+      }
+      if (empFemale$country[i] == 'Congo, Dem. Rep.'){
+          empFemale$country[i] = 'Democratic Republic of the Congo'
+      }
+     if (empFemale$country[i] == 'Congo, Rep.'){
+          empFemale$country[i] = 'Congo Republic'
+     }
+     if (empFemale$country[i] == 'Egypt, Arab Rep.'){
+          empFemale$country[i] = 'Egypt'
+     }
+     if (empFemale$country[i] == 'Gambia, The'){
+          empFemale$country[i] = 'Gambia'
+     }
+     if (empFemale$country[i] == 'Iran, Islamic Rep.'){
+          empFemale$country[i] = 'Iran'
+     }
+     if (empFemale$country[i] == 'Kyrgyz Republic'){
+          empFemale$country[i] = 'Kyrgyzstan'
+     }
+     if (empFemale$country[i] == 'Korea, Dem. Peopleâ???Ts Rep.'){
+          empFemale$country[i] = "Democratic People's Republic of Korea"
+     }
+     if (empFemale$country[i] == 'Korea, Rep.'){
+          empFemale$country[i] = "Republic of Korea"
+     }
+       if (empFemale$country[i] == 'Micronesia, Fed. Sts.'){
+          empFemale$country[i] = "Micronesia (Federated States of)"
+       }
+       if (empFemale$country[i] == 'Moldova'){
+          empFemale$country[i] = "Republic of Moldova"
+       }
+       if (empFemale$country[i] == 'Slovak Republic'){
+          empFemale$country[i] = "Slovakia"
+       }
+       if (empFemale$country[i] == 'St. Kitts and Nevis'){
+          empFemale$country[i] = "Saint Kitts and Nevis"
+       }
+       if (empFemale$country[i] == 'St. Lucia'){
+          empFemale$country[i] = "Saint Lucia"
+       }
+       if (empFemale$country[i] == 'St. Vincent and the Grenadines'){
+          empFemale$country[i] = "Saint Vincent and the Grenadines"
+       }
+      if (empFemale$country[i] == 'Macedonia, FYR'){
+          empFemale$country[i] = "The former Yugoslav Republic of Macedonia"
+      }
+      if (empFemale$country[i] == 'Tanzania'){
+          empFemale$country[i] = "United Republic of Tanzania"
+      }
+      if (empFemale$country[i] == 'Venezuela, RB'){
+          empFemale$country[i] = "Venezuela"
+      }
+      if (empFemale$country[i] == 'Yemen, Rep.'){
+          empFemale$country[i] = "Yemen"
+       }
+       if (empFemale$country[i] == 'Yemen, Rep.'){
+          empFemale$country[i] = "Yemen"
+       }
+      if (empFemale$country[i] == 'United States'){
+          empFemale$country[i] = "United States of America"
+      }
+     if (empFemale$country[i] == 'Syrian Arab Republic'){
+          empFemale$country[i] = "Syria"
+     }
+}
+            
+
+# Cleaning Country Names for Water Source Data
+
+
+xwater <- nrow(watersrc)
+
+for(i in 1:xwater)  
+{  
+     if (watersrc$country[i] == 'Bahamas, The'){
+          watersrc$country[i] = 'Bahamas'
+     }
+      if (watersrc$country[i] == 'Cabo Verde'){
+          watersrc$country[i] = 'Cape Verde'
+      }
+      if (watersrc$country[i] == 'Congo, Dem. Rep.'){
+          watersrc$country[i] = 'Democratic Republic of the Congo'
+      }
+     if (watersrc$country[i] == 'Congo, Rep.'){
+          watersrc$country[i] = 'Congo Republic'
+     }
+     if (watersrc$country[i] == 'Egypt, Arab Rep.'){
+          watersrc$country[i] = 'Egypt'
+     }
+     if (watersrc$country[i] == 'Gambia, The'){
+          watersrc$country[i] = 'Gambia'
+     }
+     if (watersrc$country[i] == 'Iran, Islamic Rep.'){
+          watersrc$country[i] = 'Iran'
+     }
+     if (watersrc$country[i] == 'Kyrgyz Republic'){
+          watersrc$country[i] = 'Kyrgyzstan'
+     }
+     if (watersrc$country[i] == 'Korea, Dem. Peopleâ???Ts Rep.'){
+          watersrc$country[i] = "Democratic People's Republic of Korea"
+     }
+     if (watersrc$country[i] == 'Korea, Rep.'){
+          watersrc$country[i] = "Republic of Korea"
+     }
+       if (watersrc$country[i] == 'Micronesia, Fed. Sts.'){
+          watersrc$country[i] = "Micronesia (Federated States of)"
+       }
+       if (watersrc$country[i] == 'Moldova'){
+          watersrc$country[i] = "Republic of Moldova"
+       }
+       if (watersrc$country[i] == 'Slovak Republic'){
+          watersrc$country[i] = "Slovakia"
+       }
+       if (watersrc$country[i] == 'St. Kitts and Nevis'){
+          watersrc$country[i] = "Saint Kitts and Nevis"
+       }
+       if (watersrc$country[i] == 'St. Lucia'){
+          watersrc$country[i] = "Saint Lucia"
+       }
+       if (watersrc$country[i] == 'St. Vincent and the Grenadines'){
+          watersrc$country[i] = "Saint Vincent and the Grenadines"
+       }
+      if (watersrc$country[i] == 'Macedonia, FYR'){
+          watersrc$country[i] = "The former Yugoslav Republic of Macedonia"
+      }
+      if (watersrc$country[i] == 'Tanzania'){
+          watersrc$country[i] = "United Republic of Tanzania"
+      }
+      if (watersrc$country[i] == 'Venezuela, RB'){
+          watersrc$country[i] = "Venezuela"
+      }
+      if (watersrc$country[i] == 'Yemen, Rep.'){
+          watersrc$country[i] = "Yemen"
+       }
+       if (watersrc$country[i] == 'Yemen, Rep.'){
+          watersrc$country[i] = "Yemen"
+       }
+      if (watersrc$country[i] == 'United States'){
+          watersrc$country[i] = "United States of America"
+      }
+     if (watersrc$country[i] == 'Syrian Arab Republic'){
+          watersrc$country[i] = "Syria"
+     }
+}
+     
+
+# Cleaning Country Names For Nutrition Data
+
+xgnrsub <- nrow(gnrsub)
+
+for(i in 1:xgnrsub)  
+{  
+     if (gnrsub$country[i] == "Lao People's Democratic Republic"){
+          gnrsub$country[i] = 'Lao PDR'
+     }
+      if (gnrsub$country[i] == 'Congo (Republic of the)'){
+          gnrsub$country[i] = 'Congo Republic'
+      }
+      if (gnrsub$country[i] == 'Viet Nam'){
+          gnrsub$country[i] = 'Vietnam'
+      }
+    
+}
+
+
+###############################################################################
+
+# The World Bank Data for various indicators is filtered for countries based on the countries available in the primary Nutrition dataset
+
+##############################################################################
+
+urbanPopdatmatch <- urbanPopdat[urbanPopdat$country%in%gnrsub$country ,]
+
+eduLowSecFemalematch <- eduLowSecFemale[which(eduLowSecFemale$country%in%gnrsub$country ),]
+
+empFemalematch <- empFemale[which(empFemale$country%in%gnrsub$country ),]
+
+watersrcmatch <- watersrc[which(watersrc$country%in%gnrsub$country ),]
+
+#View(urbanPopdatmatch)
+#View(empFemalematch)
+#View(eduLowSecFemalematch)
+#View(watersrcmatch)
+
+
+```
+
+
+
+##### Data Transformation For the World Bank Derived Indicator Data
+
+
+```{r datax, warning=FALSE, comment=FALSE,  tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+
+
+########################################################################
+#Wide to long format for urban data to calculate avaerage urban population over years
+# This is being done for 1. Since not all countries have recorded values for each year , 2. to have an average of population over couple of years made sense.
+########################################################################
+
+urbanPopdatmatchavg <- urbanPopdatmatch %>% select(country, urbanrate) %>% group_by(country) %>% dplyr::summarise(avgurbval= mean(urbanrate, na.rm = TRUE))
+
+urbanPopdatmatchwide <- urbanPopdatmatch %>% spread(year,urbanrate )
+colnames(urbanPopdatmatchwide) <- c("country", "u2010","u2011", "u2012","u2013","u2014")
+
+#View(urbanPopdatmatchavg)
+#View(urbanPopdatmatchwide)
+
+
+urbanPopdatmatchnew <- merge(urbanPopdatmatchwide, urbanPopdatmatchavg, by="country")
+#View(urbanPopdatmatchnew)
+
+
+########################################################################
+
+# Data Trnasformation for deriving country based female education average 
+
+########################################################################
+
+
+#eduLowSecFemalematch <- na.omit(eduLowSecFemalematch)
+eduLowSecFemalematchnew <- eduLowSecFemalematch %>% select(country, feduval) %>% group_by(country) %>% dplyr::summarise(avgfeduval= mean(feduval,na.rm=TRUE))
+
+
+#View(eduLowSecFemalematchnew)
+
+########################################################################
+
+# Data Trnasformation for deriving country based female employment average
+
+###########################################################################
+
+#empFemalematch <- na.omit(empFemalematch)
+empFemalematchnew <- empFemalematch %>% select(country,fempval) %>% group_by(country) %>% dplyr::summarise(avgfempval = mean(fempval,na.rm=TRUE))
+
+#View(empFemalematchnew)
+
+#########################################################################
+# Data Trnasformation for deriving country based water source % average
+
+########################################################################
+
+
+
+#empFemalematch <- na.omit(empFemalematch)
+watersrcmatchnew <- watersrcmatch %>% select(country,waterval) %>% group_by(country) %>% dplyr::summarise(avgwaterval = mean(waterval,na.rm=TRUE))
+
+#View(empFemalematchnew)
+
+
+########################################################
+# Merging World Bank data with Nutrition dataset
+
+#######################################################
+
+gnrnew <- merge(gnrsub, urbanPopdatmatchnew, by="country")
+#View(gnrnew)
+
+gnrnew <- merge(gnrnew, eduLowSecFemalematchnew, by="country")
+#View(gnrnew)
+
+
+gnrnew <- merge(gnrnew, empFemalematchnew, by="country")
+#View(gnrnew)
+
+gnrnew <- merge(gnrnew, watersrcmatchnew, by="country")
+#View(gnrnew)
+
+```
+
+
+Adding UrbanFactor as categorical column based on average urban population
+
+```{r urbanfactor,  warning=FALSE, comment=FALSE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+
+Y <- nrow(gnrnew)
+
+for(i in 1:Y)  
+{  
+     if (gnrnew$avgurbval[i] >= 70){
+          gnrnew$UrbanFactor[i] <- "U"
+     } 
+     else if (gnrnew$avgurbval[i] > 40 & gnrnew$avgurbval[i] < 70){
+          gnrnew$UrbanFactor[i] <- "D"
+          
+     }    else if(gnrnew$avgurbval[i] <= 40) {
+          gnrnew$UrbanFactor[i] <- "R"
+     }
+}
+
+```
+
+
+
+************
+
+### Plots And Maps {.tabset}
+
+Stunting, or short height for age, and wasting, or low weight for length/height, are important public health indicators. A third indicator, underweight, or low weight for age, combines information about linear growth retardation and weight for length/height.
+
+
+#### Map: World Urban Population
+
+Here we see the Urbanization level of the world countries 
+
+```{r worldmap_1, warning=FALSE, results="asis", comment=FALSE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+################################## Observing Urbanization with Urban % Population
+gc_urbanization <- gvisGeoChart(gnrnew, "country", "avgurbval", hovervar="country",
+                options=list(projection="kavrayskiy-vii",
+                             colorAxis="{colors:['yellow', 'green']}"))
+plot(gc_urbanization)
+
+
+```
+
+
+
+
+#### Map: Urbanization Vs Under-5 Overweight
+
+Plot Map for Urban Population (Color coded Avg % Of Urban Population) With Under-5 Over WEight % Population
+
+- Color Variation: Urban  %
+
+- Hover Text :  Over Weight % Population (prev_u5overweight)
+
+```{r gv_UR_OW, warning=FALSE, results="asis", comment=FALSE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+# Setting option for printing googleVis charts locally
+op <- options(gvis.plot.tag = 'chart')
+
+
+
+gnrnew$prev_u5overweight <- sub("^$", "NA", gnrnew$prev_u5overweight)
+
+gc_urban_under5overweight <- gvisGeoChart(gnrnew, "country", "avgurbval", hovervar="prev_u5overweight",
+                options=list(projection="kavrayskiy-vii",
+                             colorAxis="{colors:['yellow', 'green']}"))
+plot(gc_urban_under5overweight)
+
+cat(gc_urban_under5overweight$html$chart, file="gc_urban_under5overweight.html")
+
+###################################################################################
+```
+
+
+
+
+#### Map: Urbanization Vs Under-5 Wasting
+
+Plot Map for Urban Population (Color coded Avg % Of Urban Population) With Under-5 Wasting % Population
+
+
+- Color Variation: Current Wasting %
+
+- Hover Text : Wasting % And Average Urban Population (avgurbval)
+
+We observe the obvious unfortunate under-5 wasting in rural countries is more.
+
+```{r gv_UR_WASTE, warning=FALSE, results="asis", comment=FALSE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+
+
+
+gnrnew$prev_wasting <- sub("^$", "NA", gnrnew$prev_wasting)
+
+
+gc_urban_under5wasting <- gvisGeoChart(gnrnew, "country", "prev_wasting", hovervar="avgurbval",
+                options=list(projection="kavrayskiy-vii",height= 700,width = 500,
+                             colorAxis="{colors:['yellow', 'red']}"))
+plot(gc_urban_under5wasting)
+
+
+cat(gc_urban_under5wasting$html$chart, file="gc_urban_under5wasting.html")
+
+###################################################################################
+```
+
+
+
+#### Map: Urbanization Vs Under-5 Stunting
+
+Plot Map for Urban Population (Color coded Avg % Of Urban Population) With Under-5 Stunting % Population
+
+- Color Variation: Current Stunting %
+
+- Hover Text : Stunting % And Average Urban Population (avgurbval)
+
+However we do find that the stunting in developing /urban countries is increaing at alarming rate.
+
+```{r gv_UR_STUNT, warning=FALSE, results="asis", comment=FALSE, message=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+gnrnew$prev_stunting_current <- sub("^$", "NA", gnrnew$prev_stunting_current)
+
+gc_urban_under5stunting <- gvisGeoChart(gnrnew, "country", "prev_stunting_current", hovervar="avgurbval",
+                options=list(projection="kavrayskiy-vii", height= 700,width = 500,
+                             colorAxis="{colors:['yellow', 'red']}"))
+plot(gc_urban_under5stunting)
+
+
+cat(gc_urban_under5stunting$html$chart, file="gc_urban_under5stunting.html")
+
+
+```
+
+
+#### BubbleChart: Low Birth Wt. Vs Anaemic Mothers With Urban Factor 
+
+Bubble Chart that depicts countries in bubbles with data of 
+
+- Low Birth Weight (Y) Vs Woman % Rate for those Anaemic and within Reproductive age (X).
+
+- Size Of Bubble : Vitamin A Deficiency
+
+- Color Variance : Urban Factor(H Highly Urban, D : Developing/Mediocre Urban, R : Rural )
+
+
+
+```{r gv_BUB_warning=FALSE, comment=FALSE, message=FALSE, results="asis", tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+# Bubble Chart Depicting the Low Birth Weight Vs Anaemic % of  Reproductive Age Women Population With Vitamin A deficiency For Urban Developing And Rural Countries.
+
+
+bub_lbw_AnaemicVitA <- gvisBubbleChart(gnrnew, idvar="country", 
+                          xvar="WRAanaemia_RATE", yvar="LBW",
+                          colorvar="UrbanFactor", sizevar="prevalence_vita",
+                          options=list(height= 1200,width = 1250,
+                            hAxis='{minValue:0, maxValue:100}'))
+plot(bub_lbw_AnaemicVitA)
+
+cat(bub_lbw_AnaemicVitA$html$chart, file="bub_lbw_AnaemicVitA.html")
+
+###################################################################
+```
+
+**********
+
+### Analysis {.tabset}
+
+
+#### Data summaries
+
+Subsetting dataset for relevant variables under study.
+
+```{r ana_1, warning=FALSE, comment=FALSE, message=FALSE,fig.width= 80, results="hide", tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+
+
+gnrnew.ana <- gnrnew %>% select(country,subregionUN, prev_stunting_current, prev_wasting, prev_u5overweight, LBW, WRAanaemia_RATE,prevalence_vita,Class_IodineNutrition, avgurbval,avgfeduval, avgfempval,avgwaterval,UrbanFactor)
+
+
+gnrnew.ana$prev_u5overweight <- as.numeric(gnrnew.ana$prev_u5overweight)
+gnrnew.ana$LBW <- as.numeric(gnrnew.ana$LBW)
+
+gnrnew.ana$prev_stunting_current <- as.numeric(gnrnew.ana$prev_stunting_current)
+gnrnew.ana$WRAanaemia_RATE <- as.numeric(gnrnew.ana$WRAanaemia_RATE)
+gnrnew.ana$prev_wasting <- as.numeric(gnrnew.ana$prev_wasting)
+
+
+
+```
+
+
+
+```{r datasum, warning=FALSE, fig.width= 80,  tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+
+summary(gnrnew.ana$prev_wasting)
+
+summary(gnrnew.ana$prev_u5overweight)
+
+summary(gnrnew.ana$LBW)
+
+summary(gnrnew.ana$WRAanaemia_RATE)
+
+summary(gnrnew.ana$avgfeduval)
+
+```
+
+
+#### Plots 
+
+**Plot : Under-5 Wasting Vs Urbanization : Linear Regression**
+
+```{r ana_2, warning=FALSE, comment=FALSE, message=FALSE, results="asis", tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+#########################################################################
+
+ggplot(gnrnew.ana, aes(x=avgurbval,y=prev_wasting)) + geom_point(aes(color=WRAanaemia_RATE)) + geom_smooth(method="lm") + ggtitle("Under-5 Wasting Vs Urbanization") + labs(x="Urban Population %", y="Under - 5 Wasting")
+
+
+m_wasteurban <- lm(gnrnew.ana$prev_wasting~gnrnew.ana$avgurbval)
+summary(m_wasteurban)
+
+
+```
+
+linear equation:
+
+prev_wasting = 11.71474 -0.10876 * avgurbval
+Strong and negative linear relationship between under 5 wasting and urbaniation.
+
+P value is much less and obvious relationship between impoverished countries and malnutrition
+
+```{r ana_21, warning=FALSE, comment=FALSE, message=FALSE, results="asis", tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+qqnorm(m_wasteurban$residuals)
+qqline(m_wasteurban$residuals)
+
+
+```
+
+The normal probability plot shows heavy rightskewness
+
+
+**Plot : Under-5 OverWeight Vs Urbanization : Linear Regression**
+
+We observe that female employment in urbanized countries might have an affect on the overweight factor.
+
+```{r ana_3, warning=FALSE, comment=FALSE, message=FALSE, results="asis", tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+
+
+ggplot(gnrnew.ana, aes(x=avgurbval,y=prev_u5overweight)) + geom_point(aes(color=avgfempval)) + geom_smooth(method="lm") + ggtitle("Under-5 Overweight Vs Urbanization") + labs(x="Urban Population %", y="Under - 5 Overweight")
+
+m_overwturban <- lm(gnrnew.ana$prev_u5overweight~gnrnew.ana$avgurbval)
+summary(m_overwturban)
+
+
+```
+equation :
+prev_u5overweight = 4.78000 + 0.04959 * avgurbval
+
+p value is 0.009546 which is much less than <0.05
+
+Which proves that there is a relationship between OVerweight and Urbanization.
+
+
+```{r ana_31, warning=FALSE, comment=FALSE, message=FALSE, results="asis", tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+qqnorm(m_overwturban$residuals)
+qqline(m_overwturban$residuals)
+
+```
+
+
+The normal probability plot shows heavy rightskewness
+
+
+**Multiple Regressions With Female Employment added to the model**
+
+Lets find if the female employment affects the overweight factor  along with urbanization
+
+```{r ana_4, warning=FALSE, comment=FALSE, message=FALSE, results="asis", tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+
+m_overwturbanfemp <- lm(gnrnew.ana$prev_u5overweight~gnrnew.ana$avgurbval + gnrnew.ana$avgfempval)
+
+summary(m_overwturbanfemp)
+
+
+
+```
+
+equation :
+prev_u5overweight = 4.03266 + 0.03419 * avgurbval + 0.02244 * avgfempval
+
+p value is 0.00040085 which is much less than <0.05
+
+Which proves that there is a relationship between OVerweight and Urbanization
+
+We observe that there is very less significance 0.02244 * avgfempval with every 1 unit change in female education.
+
+```{r ana_41, warning=FALSE, comment=FALSE, message=FALSE, results="asis", tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+qqnorm(m_overwturbanfemp$residuals)
+qqline(m_overwturbanfemp$residuals)
+
+```
+
+We find these tailed in nirmal probability plot.And not a normal distribution.
+
+
+**Plot : Women Anaemic Vs Urbanization **
+
+Plotting For Countries With female employment as factor
+
+While this plot should have shown a negative sharply linear relation, we find that the Anemic rate is increasing at an alarming rate, and is almost more than half of that of the impoverished countries
+
+```{r ana_5, warning=FALSE, comment=FALSE, message=FALSE, results="hide", tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+
+gnrnew.ana$prev_stunting_current <- as.numeric(gnrnew.ana$prev_stunting_current)
+
+ggplot(gnrnew.ana, aes(x=avgurbval,y=WRAanaemia_RATE)) + geom_point(aes(color=avgfempval))+ geom_smooth(method="lm")  + ggtitle("Women Anaemic Vs Urbanization") + labs(x="Urban Population %", y="Anaemic")
+
+
+
+```
+
+
+
+**Plot : Low Birth Weight % Vs Female Education, Faceted By Urban Factor ,By Working Female Population**
+UrbanFactor:
+
+- R : Rural
+
+- D : Developing
+
+- U : Highly Urban
+
+```{r ana_6, warning=FALSE, comment=FALSE, message=FALSE, results="hide", tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+
+
+ggplot(data=gnrnew.ana, aes(y=LBW, x=avgfeduval)) + geom_point(aes(color = gnrnew.ana$avgfempval)) + facet_grid(~gnrnew.ana$UrbanFactor) + ggtitle("Low Birth Weight % Vs Female Education, Faceted By Urban Factor ,By Working Female Population") + scale_x_continuous(name="Female Education Population %") + scale_y_continuous(name="Low Birth Weight %" )
+ 
+
+
+# Frequency Plot
+
+ggplot(gnrnew.ana, aes(prev_u5overweight, colour = UrbanFactor)) + geom_freqpoly() + ggtitle("Frequencey Polygon : Under -5 OverWeight : UrbanFactor Based") + scale_x_continuous(name="Under -5 OverWeight") 
+
+
+
+```
+
+We do see that the female education promotes better birth weight.ie.e less % of Low Birth Weight
+
+From the frequency plot, we find that at father right (more % of under-5 overweight) the Urban /developing countries show prominence
+
+
+#### Inferences
+
+To ee the significance and correlation among the various factors, we plot a correlation matrix .
+
+```{r warning=FALSE,comment=FALSE, message=FALSE,results="asis",tidy=TRUE, tidy.opts=list(width.cutoff=150)}
+
+
+cor(gnrnew.ana$prev_wasting, gnrnew.ana$avgurbval)
+     
+
+library(corrplot)
+cormat<-cor(gnrnew.ana[,c("prev_wasting","prev_stunting_current","LBW","WRAanaemia_RATE","prevalence_vita","prev_u5overweight","avgurbval","avgfeduval","avgfempval","avgwaterval")], use = "pairwise.complete.obs")
+
+corrplot(cormat, method="color",  addCoef.col = "black")
+
+
+
+
+```
+
+We plot a corelation matrix to find the correlation among variables.
+
+We do see correlation among under5-overweight and urbanization, there are factors like improved water sources  availbility %(although strangely), female employment that add a bit of significance. With working mother not able to provide as much attention to under -5 kids whether in  urban countries could be a contributing factor.
+
+
+We also found under5-stunting presence in urban countries . With the corelation matrix showing a negative corelation, and also observed from the plot, the linearity is not very strongly negative may be suggestive of the increasing problem at the moment.
+
+Also from the plot, thereis an obvious relationship between low birth weight and under-5 wasting, which is also strongly linked to anaemic mother and prevalence of Vit A deficiency among children
+
+**********
+
+
+### Conclusion
+
+Although, it could not be established fullfledged about other factors (improved / safe water resources , female employement) that affect over nutrition, the relationship does exist to some extent and need to be further analyzed with advance models.
+
+The relationships although weak, would need further analysis and more data over the years for all countries. The presence lot of NA values  have influenced the analysis.
+
+We did find an obvious relation among low birth weight , under-5 stunting and rural countries, 
+under 5-Over-weight in urban areas is a cause of concern.
+There could be other factors that may be affecting the development of children under 5
+
+***********
+
+
+
+### Reference
+
+
+**- https://developers.google.com/chart/interactive/docs/gallery/map**
+
+**-http://data.worldbank.org/**
+
+**-https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/MUOX19)**
+
+**-https://www.r-bloggers.com/display-googlevis-charts-within-rstudio/**
+
+**-https://www.r-bloggers.com/search/googlevis/**
+
